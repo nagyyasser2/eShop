@@ -1,23 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
-
+﻿
 namespace eShop.Core.Models
 {
-    public class ProductImage
+    public class WishListItem
     {
         public int Id { get; set; }
-        [Required]
-        public string ImageUrl { get; set; }
-        public string? AltText { get; set; }
-        public bool IsPrimary { get; set; } = false;
-        public int SortOrder { get; set; } = 0;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? Notes { get; set; }
+        public int Priority { get; set; } = 0; // User can prioritize items
 
         // Foreign Keys
+        public int WishListId { get; set; }
         public int ProductId { get; set; }
 
         // Navigation Properties
+        public virtual WishList WishList { get; set; }
         public virtual Product Product { get; set; }
-       
     }
-
 }

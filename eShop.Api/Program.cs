@@ -4,12 +4,24 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using eShop.Core.Services.Abstractions;
 using eShop.Core.Services.Implementations;
+using Microsoft.AspNetCore.Authentication;
 using eShop.Core.Models;
 using System.Text;
 using eShop.EF;
-using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy =>
+        {
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+});
+
 
 // Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -80,6 +92,7 @@ builder.Services.AddAuthorizationBuilder()
             policy.RequireRole("Admin"))
         .AddPolicy("RequireManagerOrAdmin", policy =>
             policy.RequireRole("Manager", "Admin"));
+
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();

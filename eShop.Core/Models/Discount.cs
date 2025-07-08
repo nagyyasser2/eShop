@@ -20,5 +20,8 @@ namespace eShop.Core.Models
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation
+        public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

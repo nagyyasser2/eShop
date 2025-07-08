@@ -19,9 +19,9 @@ namespace eShop.Core.Models
         public string? GoogleId { get; set; }
 
         // Navigation Properties
+        public virtual Cart? Cart { get; set; }
+        public virtual WishList? WishList { get; set; }
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-        public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
         public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
-        public virtual ICollection<WishList> WishLists { get; set; } = new List<WishList>();
     }
 }

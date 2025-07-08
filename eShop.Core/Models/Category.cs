@@ -16,7 +16,7 @@ namespace eShop.Core.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
-        public virtual ICollection<SubCategory> SubCategories { get; set; } = new List<SubCategory>();
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
+        public virtual ICollection<SubCategory> SubCategories { get; set; } = new List<SubCategory>();
     }
 }

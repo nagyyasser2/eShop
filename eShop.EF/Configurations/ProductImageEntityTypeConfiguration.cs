@@ -8,7 +8,7 @@ namespace eShop.EF.Configurations
     {
         public void Configure(EntityTypeBuilder<ProductImage> builder)
         {
-            builder.HasKey(pi => new { pi.ProductId, pi.ImageId });
+            //builder.HasKey(pi => new { pi.ProductId, pi.ImageId });
         }
     }
 }

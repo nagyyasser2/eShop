@@ -17,7 +17,7 @@ namespace eShop.Core.Models
         public int CategoryId { get; set; }
 
         // Navigation Properties
-        public virtual Category Category { get; set; }
+        public virtual Category? Category { get; set; }
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

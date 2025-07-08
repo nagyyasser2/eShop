@@ -31,14 +31,16 @@ namespace eShop.Core.Models
         public int CategoryId { get; set; }
         public int? SubCategoryId { get; set; }
         public int? BrandId { get; set; }
+        public int? DiscountId { get; set; }
 
         // Navigation Properties
-        public virtual Category Category { get; set; }
+        public virtual Discount? Discount { get; set; }
+        public virtual Category? Category { get; set; }
         public virtual SubCategory? SubCategory { get; set; }
         public virtual Brand? Brand { get; set; }
         public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();
         public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
-        public virtual ICollection<ProductReview> ProductReviews { get; set; } = new List<ProductReview>();
+        public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
         public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
         public virtual ICollection<WishList> WishLists { get; set; } = new List<WishList>();

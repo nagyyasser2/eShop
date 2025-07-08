@@ -23,6 +23,6 @@ namespace eShop.Core.DTOs
         [Required]
         public string RedirectUri { get; set; }
 
-        public string State { get; set; }
+        public string? State { get; set; }
     }
 }

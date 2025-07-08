@@ -13,9 +13,10 @@ namespace eShop.Core.Models
 
         // Foreign Keys
         public string UserId { get; set; }
+        public int ProductId { get; set; }
 
         // Navigation Properties
         public virtual ApplicationUser User { get; set; }
-        public virtual ICollection<ProductReview> ProductReviews { get; set; } = new List<ProductReview>();
+        public virtual Product Product { get; set; }
     }
 }

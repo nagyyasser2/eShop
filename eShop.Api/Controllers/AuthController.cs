@@ -4,6 +4,7 @@ using eShop.Core.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using eShop.Core.Config;
 
 namespace eShop.Api.Controllers
 {
@@ -11,6 +12,7 @@ namespace eShop.Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+        private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IJwtTokenService _jwtTokenService;
@@ -19,12 +21,14 @@ namespace eShop.Api.Controllers
 
 
         public AuthController(
+            IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IJwtTokenService jwtTokenService,
             RoleManager<IdentityRole> roleManager,
             IGoogleAuthService googleAuthService)
         {
+            _configuration = configuration;
             _userManager = userManager;
             _signInManager = signInManager;
             _jwtTokenService = jwtTokenService;
@@ -46,6 +50,7 @@ namespace eShop.Api.Controllers
             }
 
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
+
             if (existingUser != null)
             {
                 return BadRequest(new ApiResponse<object>
@@ -68,7 +73,6 @@ namespace eShop.Api.Controllers
 
             if (result.Succeeded)
             {
-                // Add user to default role
                 await _userManager.AddToRoleAsync(user, "User");
 
                 var token = await _jwtTokenService.GenerateTokenAsync(user);
@@ -99,6 +103,8 @@ namespace eShop.Api.Controllers
                 Errors = result.Errors.Select(e => e.Description).ToList()
             });
         }
+
+
         [HttpGet("google-auth-url")]
         public IActionResult GetGoogleAuthUrl([FromQuery] GoogleAuthUrlRequest request)
         {
@@ -122,6 +128,130 @@ namespace eShop.Api.Controllers
             });
         }
 
+        [HttpGet("callback")]
+        public async Task<IActionResult> GoogleCallback([FromQuery] string code, [FromQuery] string state)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(code))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Missing authorization code or redirect URI"
+                    });
+                }
+
+                var googleSettings = _configuration.GetSection("Authentication:Google").Get<GoogleAuthSettings>();
+
+                if (googleSettings == null || string.IsNullOrEmpty(googleSettings.RedirectUri))
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Google authentication settings are not configured properly."
+                    });
+                }
+
+                var tokenResponse = await _googleAuthService.ExchangeCodeForTokenAsync(code, googleSettings.RedirectUri);
+
+                if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Failed to exchange authorization code for access token"
+                    });
+                }
+
+                var googleUser = await _googleAuthService.GetUserInfoAsync(tokenResponse.AccessToken);
+
+                if (googleUser == null || string.IsNullOrEmpty(googleUser.Email))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Failed to get user information from Google"
+                    });
+                }
+
+                var user = await _userManager.FindByEmailAsync(googleUser.Email);
+
+                if (user == null)
+                {
+                    // Create new user
+                    user = new ApplicationUser
+                    {
+                        UserName = googleUser.Email,
+                        Email = googleUser.Email,
+                        FirstName = googleUser.GivenName ?? "",
+                        LastName = googleUser.FamilyName ?? "",
+                        GoogleId = googleUser.Id,
+                        IsGoogleUser = true,
+                        ProfilePictureUrl = googleUser.Picture,
+                        EmailConfirmed = googleUser.VerifiedEmail
+                    };
+
+                    var result = await _userManager.CreateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        return BadRequest(new ApiResponse<object>
+                        {
+                            Success = false,
+                            Message = "Failed to create user account",
+                            Errors = result.Errors.Select(e => e.Description).ToList()
+                        });
+                    }
+
+                    // Add user to default role
+                    await _userManager.AddToRoleAsync(user, "User");
+                }
+                else
+                {
+                    // Update existing user with Google info if not already a Google user
+                    if (!user.IsGoogleUser)
+                    {
+                        user.GoogleId = googleUser.Id;
+                        user.IsGoogleUser = true;
+                        user.ProfilePictureUrl = googleUser.Picture;
+                        await _userManager.UpdateAsync(user);
+                    }
+                }
+
+                var token = await _jwtTokenService.GenerateTokenAsync(user);
+                var roles = await _userManager.GetRolesAsync(user);
+
+                return Ok(new ApiResponse<AuthResponse>
+                {
+                    Success = true,
+                    Message = "Google authentication successful",
+                    Data = new AuthResponse
+                    {
+                        Token = token,
+                        User = new UserResponse
+                        {
+                            Id = user.Id,
+                            Email = user.Email,
+                            FirstName = user.FirstName,
+                            LastName = user.LastName,
+                            DateOfBirth = user.DateOfBirth,
+                            ProfilePictureUrl = user.ProfilePictureUrl,
+                            Roles = roles.ToList()
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Google authentication failed",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
+        }
+        
         [HttpPost("google-login")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
         {
@@ -220,6 +350,9 @@ namespace eShop.Api.Controllers
         {
             try
             {
+                Console.WriteLine(request.Code);
+                Console.WriteLine(request.RedirectUri);
+
                 var tokenResponse = await _googleAuthService.ExchangeCodeForTokenAsync(request.Code, request.RedirectUri);
 
                 if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))

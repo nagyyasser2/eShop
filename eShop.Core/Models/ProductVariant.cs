@@ -12,16 +12,15 @@ namespace eShop.Core.Models
         public decimal? Price { get; set; }
         public int StockQuantity { get; set; }
         public bool IsActive { get; set; } = true;
+        public string Color { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Foreign Keys
         public int ProductId { get; set; }
-        public int? ColorId { get; set; }
         public int? SizeId { get; set; }
 
         // Navigation Properties
         public virtual Product Product { get; set; }
-        public virtual Color? Color { get; set; }
         public virtual Size? Size { get; set; }
         public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
