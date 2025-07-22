@@ -1,6 +1,71 @@
-﻿namespace eShop.EF
+﻿using eShop.Core.Models;
+using eShop.Core.Services.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using eShop.EF;
+
+namespace eShop.Core.Services.Implementations
 {
-    class UnitOfWork
+    public class UnitOfWork : IUnitOfWork
     {
+        private readonly DbContext _context;
+        private bool _disposed = false;
+        private readonly IBaseRepository<Product> _productRepository;
+        private readonly IBaseRepository<Order> _orderRepository;
+        private readonly IBaseRepository<Category> _categoryRepository;
+
+        public UnitOfWork(ApplicationDbContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _productRepository = new BaseRepository<Product>(context);
+            _orderRepository = new BaseRepository<Order>(context);
+            _categoryRepository = new BaseRepository<Category>(context);
+        }
+
+        public IBaseRepository<Product> ProductRepository => _productRepository;
+
+        public IBaseRepository<Order> OrderRepository => _orderRepository;
+        public IBaseRepository<Category> CategoryRepository => _categoryRepository;
+        public IDbContextTransaction BeginTransaction()
+        {
+            return _context.Database.BeginTransaction();
+        }
+
+        public async Task CommitTransactionAsync()
+        {
+            await _context.Database.CommitTransactionAsync();
+        }
+
+        public async Task RollbackTransactionAsync()
+        {
+            await _context.Database.RollbackTransactionAsync();
+        }
+        public int SaveChanges()
+        {
+            return _context.SaveChanges();
+        }
+
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _context.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

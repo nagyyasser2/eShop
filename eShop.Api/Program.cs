@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication;
 using eShop.Core.Models;
 using System.Text;
 using eShop.EF;
+using System.Text.Json.Serialization;
+using eShop.Core.Mapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,11 +24,15 @@ builder.Services.AddCors(options =>
         });
 });
 
-
 // Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
+
+// Add Unit of Work and Repositories
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Add Identity Services
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -93,13 +99,15 @@ builder.Services.AddAuthorizationBuilder()
         .AddPolicy("RequireManagerOrAdmin", policy =>
             policy.RequireRole("Manager", "Admin"));
 
-
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 builder.Services.AddHttpClient();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.AddOpenApi();
-
 
 var app = builder.Build();
 
@@ -113,11 +121,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
-app.UseAuthorization(); 
+app.UseAuthorization();
 
 app.MapControllers();
 

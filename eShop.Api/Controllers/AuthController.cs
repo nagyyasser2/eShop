@@ -19,7 +19,6 @@ namespace eShop.Api.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IGoogleAuthService _googleAuthService;
 
-
         public AuthController(
             IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
@@ -103,7 +102,6 @@ namespace eShop.Api.Controllers
                 Errors = result.Errors.Select(e => e.Description).ToList()
             });
         }
-
 
         [HttpGet("google-auth-url")]
         public IActionResult GetGoogleAuthUrl([FromQuery] GoogleAuthUrlRequest request)
@@ -515,6 +513,18 @@ namespace eShop.Api.Controllers
             {
                 Success = false,
                 Message = "Invalid email or password"
+            });
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                Message = "Logout successful"
             });
         }
 

@@ -36,7 +36,6 @@ namespace eShop.Core.Models
         // Navigation Properties
         public virtual Discount? Discount { get; set; }
         public virtual Category? Category { get; set; }
-        public virtual SubCategory? SubCategory { get; set; }
         public virtual Brand? Brand { get; set; }
         public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();
         public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();

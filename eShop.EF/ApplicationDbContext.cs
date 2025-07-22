@@ -48,7 +48,6 @@ namespace eShop.EF
         public DbSet<Setting> Settings { get; set; }
         public DbSet<ShippingMethod> ShippingMethods { get; set; }
         public DbSet<Size> Sizes { get; set; }
-        public DbSet<SubCategory> SubCategories { get; set; }
         public DbSet<WishList> WishLists { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eShop.EF;
 
@@ -11,9 +12,11 @@ using eShop.EF;
 namespace eShop.EF.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250711183848_UpdateImageUrlToImageUrlsInCategoryAndCategories")]
+    partial class UpdateImageUrlToImageUrlsInCategoryAndCategories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,15 +54,13 @@ namespace eShop.EF.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "550e8400-e29b-41d4-a716-446655440001",
-                            ConcurrencyStamp = "550e8400-e29b-41d4-a716-446655440001",
+                            Id = "1",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "550e8400-e29b-41d4-a716-446655440002",
-                            ConcurrencyStamp = "550e8400-e29b-41d4-a716-446655440002",
+                            Id = "2",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -150,13 +151,6 @@ namespace eShop.EF.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = "550e8400-e29b-41d4-a716-446655440003",
-                            RoleId = "550e8400-e29b-41d4-a716-446655440001"
-                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -282,30 +276,6 @@ namespace eShop.EF.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "550e8400-e29b-41d4-a716-446655440003",
-                            AccessFailedCount = 0,
-                            ConcurrencyStamp = "550e8400-e29b-41d4-a716-446655440005",
-                            CreatedDate = new DateTime(2025, 7, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            DateOfBirth = new DateTime(1980, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "admin@eshop.com",
-                            EmailConfirmed = true,
-                            FirstName = "Admin",
-                            IsActive = true,
-                            IsGoogleUser = false,
-                            LastName = "User",
-                            LockoutEnabled = false,
-                            NormalizedEmail = "ADMIN@ESHOP.COM",
-                            NormalizedUserName = "ADMIN@ESHOP.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEHuOZK5xE8lZ5H+WT2pClEKCVKd4S4LzZKhWlHVCGO9nM7y+wSkq8qT3Xv6w4KjmPg==",
-                            PhoneNumberConfirmed = false,
-                            SecurityStamp = "550e8400-e29b-41d4-a716-446655440004",
-                            TwoFactorEnabled = false,
-                            UserName = "admin@eshop.com"
-                        });
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Banner", b =>
@@ -483,15 +453,10 @@ namespace eShop.EF.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("ParentCategoryId")
-                        .HasColumnType("int");
-
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ParentCategoryId");
 
                     b.ToTable("Categories");
                 });
@@ -962,6 +927,8 @@ namespace eShop.EF.Migrations
 
                     b.HasIndex("DiscountId");
 
+                    b.HasIndex("SubCategoryId");
+
                     b.ToTable("Products");
                 });
 
@@ -1172,6 +1139,45 @@ namespace eShop.EF.Migrations
                     b.ToTable("Sizes");
                 });
 
+            modelBuilder.Entity("eShop.Core.Models.SubCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.PrimitiveCollection<string>("ImageUrls")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("SubCategories");
+                });
+
             modelBuilder.Entity("eShop.Core.Models.WishList", b =>
                 {
                     b.Property<int>("Id")
@@ -1334,15 +1340,6 @@ namespace eShop.EF.Migrations
                     b.Navigation("ProductVariant");
                 });
 
-            modelBuilder.Entity("eShop.Core.Models.Category", b =>
-                {
-                    b.HasOne("eShop.Core.Models.Category", "ParentCategory")
-                        .WithMany("ChildCategories")
-                        .HasForeignKey("ParentCategoryId");
-
-                    b.Navigation("ParentCategory");
-                });
-
             modelBuilder.Entity("eShop.Core.Models.Order", b =>
                 {
                     b.HasOne("eShop.Core.Models.Coupon", "Coupon")
@@ -1426,11 +1423,17 @@ namespace eShop.EF.Migrations
                         .WithMany("Products")
                         .HasForeignKey("DiscountId");
 
+                    b.HasOne("eShop.Core.Models.SubCategory", "SubCategory")
+                        .WithMany("Products")
+                        .HasForeignKey("SubCategoryId");
+
                     b.Navigation("Brand");
 
                     b.Navigation("Category");
 
                     b.Navigation("Discount");
+
+                    b.Navigation("SubCategory");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.ProductImage", b =>
@@ -1478,6 +1481,17 @@ namespace eShop.EF.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.SubCategory", b =>
+                {
+                    b.HasOne("eShop.Core.Models.Category", "Category")
+                        .WithMany("SubCategories")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.WishList", b =>
@@ -1537,9 +1551,9 @@ namespace eShop.EF.Migrations
 
             modelBuilder.Entity("eShop.Core.Models.Category", b =>
                 {
-                    b.Navigation("ChildCategories");
-
                     b.Navigation("Products");
+
+                    b.Navigation("SubCategories");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Coupon", b =>
@@ -1594,6 +1608,11 @@ namespace eShop.EF.Migrations
             modelBuilder.Entity("eShop.Core.Models.Size", b =>
                 {
                     b.Navigation("ProductVariants");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.SubCategory", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.WishList", b =>

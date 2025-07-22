@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eShop.EF;
 
@@ -11,9 +12,11 @@ using eShop.EF;
 namespace eShop.EF.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250720151355_RemoveSubCategoryModel")]
+    partial class RemoveSubCategoryModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,15 +54,13 @@ namespace eShop.EF.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "550e8400-e29b-41d4-a716-446655440001",
-                            ConcurrencyStamp = "550e8400-e29b-41d4-a716-446655440001",
+                            Id = "1",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "550e8400-e29b-41d4-a716-446655440002",
-                            ConcurrencyStamp = "550e8400-e29b-41d4-a716-446655440002",
+                            Id = "2",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -150,13 +151,6 @@ namespace eShop.EF.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = "550e8400-e29b-41d4-a716-446655440003",
-                            RoleId = "550e8400-e29b-41d4-a716-446655440001"
-                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -282,30 +276,6 @@ namespace eShop.EF.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "550e8400-e29b-41d4-a716-446655440003",
-                            AccessFailedCount = 0,
-                            ConcurrencyStamp = "550e8400-e29b-41d4-a716-446655440005",
-                            CreatedDate = new DateTime(2025, 7, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            DateOfBirth = new DateTime(1980, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "admin@eshop.com",
-                            EmailConfirmed = true,
-                            FirstName = "Admin",
-                            IsActive = true,
-                            IsGoogleUser = false,
-                            LastName = "User",
-                            LockoutEnabled = false,
-                            NormalizedEmail = "ADMIN@ESHOP.COM",
-                            NormalizedUserName = "ADMIN@ESHOP.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEHuOZK5xE8lZ5H+WT2pClEKCVKd4S4LzZKhWlHVCGO9nM7y+wSkq8qT3Xv6w4KjmPg==",
-                            PhoneNumberConfirmed = false,
-                            SecurityStamp = "550e8400-e29b-41d4-a716-446655440004",
-                            TwoFactorEnabled = false,
-                            UserName = "admin@eshop.com"
-                        });
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Banner", b =>
