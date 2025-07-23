@@ -9,10 +9,12 @@ namespace eShop.Core.Services.Implementations
     public class UnitOfWork : IUnitOfWork
     {
         private readonly DbContext _context;
-        private bool _disposed = false;
         private readonly IBaseRepository<Product> _productRepository;
         private readonly IBaseRepository<Order> _orderRepository;
         private readonly IBaseRepository<Category> _categoryRepository;
+        private readonly IBaseRepository<Banner> _bannerRepository;
+
+        private bool _disposed = false;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -20,12 +22,13 @@ namespace eShop.Core.Services.Implementations
             _productRepository = new BaseRepository<Product>(context);
             _orderRepository = new BaseRepository<Order>(context);
             _categoryRepository = new BaseRepository<Category>(context);
+            _bannerRepository = new BaseRepository<Banner>(context);
         }
 
         public IBaseRepository<Product> ProductRepository => _productRepository;
-
         public IBaseRepository<Order> OrderRepository => _orderRepository;
         public IBaseRepository<Category> CategoryRepository => _categoryRepository;
+        public IBaseRepository<Banner> BannerRepository => _bannerRepository;
         public IDbContextTransaction BeginTransaction()
         {
             return _context.Database.BeginTransaction();

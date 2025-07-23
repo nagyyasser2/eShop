@@ -28,8 +28,7 @@ namespace eShop.Core.Models
         public DateTime? UpdatedAt { get; set; }
 
         // Foreign Keys
-        public int CategoryId { get; set; }
-        public int? SubCategoryId { get; set; }
+        public int? CategoryId { get; set; }
         public int? BrandId { get; set; }
         public int? DiscountId { get; set; }
 

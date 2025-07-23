@@ -8,10 +8,8 @@ namespace eShopApi.Core.Enums
 {
     public enum BannerPosition
     {
-        MainSlider,
-        TopBanner,
-        SideBanner,
-        BottomBanner,
-        PopupBanner
+        HomepageTop,
+        HomepageMiddle,
+        Footer
     }
 }
