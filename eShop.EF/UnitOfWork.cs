@@ -13,6 +13,8 @@ namespace eShop.Core.Services.Implementations
         private readonly IBaseRepository<Order> _orderRepository;
         private readonly IBaseRepository<Category> _categoryRepository;
         private readonly IBaseRepository<Banner> _bannerRepository;
+        private readonly IBaseRepository<Variant> _variantRepository;
+        private readonly IBaseRepository<Image> _imageRepository;
 
         private bool _disposed = false;
 
@@ -23,12 +25,16 @@ namespace eShop.Core.Services.Implementations
             _orderRepository = new BaseRepository<Order>(context);
             _categoryRepository = new BaseRepository<Category>(context);
             _bannerRepository = new BaseRepository<Banner>(context);
+            _variantRepository = new BaseRepository<Variant>(context);
+            _imageRepository = new BaseRepository<Image>(context);
         }
 
         public IBaseRepository<Product> ProductRepository => _productRepository;
         public IBaseRepository<Order> OrderRepository => _orderRepository;
         public IBaseRepository<Category> CategoryRepository => _categoryRepository;
         public IBaseRepository<Banner> BannerRepository => _bannerRepository;
+        public IBaseRepository<Variant> VariantRepository => _variantRepository;
+        public IBaseRepository<Image> ImageRepository => _imageRepository;
         public IDbContextTransaction BeginTransaction()
         {
             return _context.Database.BeginTransaction();

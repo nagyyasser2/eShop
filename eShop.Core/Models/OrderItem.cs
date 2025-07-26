@@ -22,6 +22,6 @@ namespace eShop.Core.Models
         // Navigation Properties
         public virtual Order Order { get; set; }
         public virtual Product Product { get; set; }
-        public virtual ProductVariant? ProductVariant { get; set; }
+        public virtual Variant? ProductVariant { get; set; }
     }
 }

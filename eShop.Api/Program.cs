@@ -10,6 +10,7 @@ using System.Text;
 using eShop.EF;
 using System.Text.Json.Serialization;
 using eShop.Core.Mapper;
+using eShop.EF.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,8 +33,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Add Unit of Work and Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IVariantService, VariantService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddAutoMapper(typeof(BannerProfile));
+builder.Services.AddAutoMapper(typeof(VariantProfileMapping));
+builder.Services.AddAutoMapper(typeof(ProductMappingProfile));
 
 // Add Identity Services
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

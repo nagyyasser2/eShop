@@ -20,8 +20,6 @@ namespace eShop.Core.Models
 
         // Navigation Properties
         public virtual Cart? Cart { get; set; }
-        public virtual WishList? WishList { get; set; }
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-        public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
     }
 }

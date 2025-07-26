@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eShop.EF;
 
@@ -11,9 +12,11 @@ using eShop.EF;
 namespace eShop.EF.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250724151106_ProductModelUpdate")]
+    partial class ProductModelUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -430,6 +433,101 @@ namespace eShop.EF.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("eShop.Core.Models.Coupon", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaximumDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MinimumAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Coupons");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.Discount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Discounts");
+                });
+
             modelBuilder.Entity("eShop.Core.Models.Image", b =>
                 {
                     b.Property<int>("Id")
@@ -444,6 +542,10 @@ namespace eShop.EF.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("bit");
 
@@ -452,10 +554,6 @@ namespace eShop.EF.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -502,6 +600,9 @@ namespace eShop.EF.Migrations
                     b.Property<string>("BillingZipCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("CouponId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -580,6 +681,8 @@ namespace eShop.EF.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CouponId");
 
                     b.HasIndex("ShippingMethodId");
 
@@ -773,6 +876,9 @@ namespace eShop.EF.Migrations
                     b.Property<string>("Dimensions")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("DiscountId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -804,6 +910,9 @@ namespace eShop.EF.Migrations
                     b.Property<bool>("TrackQuantity")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<double>("Weight")
                         .HasColumnType("float");
 
@@ -811,7 +920,53 @@ namespace eShop.EF.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("DiscountId");
+
                     b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.ProductVariant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SKU")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("SizeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SizeId");
+
+                    b.ToTable("ProductVariants");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Setting", b =>
@@ -907,7 +1062,7 @@ namespace eShop.EF.Migrations
                     b.ToTable("Sizes");
                 });
 
-            modelBuilder.Entity("eShop.Core.Models.Variant", b =>
+            modelBuilder.Entity("eShop.Core.Models.WishList", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -915,44 +1070,73 @@ namespace eShop.EF.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Color")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
 
-                    b.Property<decimal?>("Price")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("bit");
 
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SKU")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Size")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("SizeId")
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("StockQuantity")
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("WishLists");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.WishListItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WishListId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("SizeId");
+                    b.HasIndex("WishListId");
 
-                    b.ToTable("Variants");
+                    b.ToTable("WishListItem");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1024,13 +1208,13 @@ namespace eShop.EF.Migrations
                         .IsRequired();
 
                     b.HasOne("eShop.Core.Models.Product", "Product")
-                        .WithMany()
+                        .WithMany("CartItems")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("eShop.Core.Models.Variant", "ProductVariant")
-                        .WithMany()
+                    b.HasOne("eShop.Core.Models.ProductVariant", "ProductVariant")
+                        .WithMany("CartItems")
                         .HasForeignKey("ProductVariantId");
 
                     b.Navigation("Cart");
@@ -1063,6 +1247,10 @@ namespace eShop.EF.Migrations
 
             modelBuilder.Entity("eShop.Core.Models.Order", b =>
                 {
+                    b.HasOne("eShop.Core.Models.Coupon", "Coupon")
+                        .WithMany("Orders")
+                        .HasForeignKey("CouponId");
+
                     b.HasOne("eShop.Core.Models.ShippingMethod", "ShippingMethod")
                         .WithMany("Orders")
                         .HasForeignKey("ShippingMethodId");
@@ -1072,6 +1260,8 @@ namespace eShop.EF.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Coupon");
 
                     b.Navigation("ShippingMethod");
 
@@ -1087,13 +1277,13 @@ namespace eShop.EF.Migrations
                         .IsRequired();
 
                     b.HasOne("eShop.Core.Models.Product", "Product")
-                        .WithMany()
+                        .WithMany("OrderItems")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("eShop.Core.Models.Variant", "ProductVariant")
-                        .WithMany()
+                    b.HasOne("eShop.Core.Models.ProductVariant", "ProductVariant")
+                        .WithMany("OrderItems")
                         .HasForeignKey("ProductVariantId");
 
                     b.Navigation("Order");
@@ -1129,22 +1319,64 @@ namespace eShop.EF.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("eShop.Core.Models.Discount", "Discount")
+                        .WithMany("Products")
+                        .HasForeignKey("DiscountId");
+
                     b.Navigation("Category");
+
+                    b.Navigation("Discount");
                 });
 
-            modelBuilder.Entity("eShop.Core.Models.Variant", b =>
+            modelBuilder.Entity("eShop.Core.Models.ProductVariant", b =>
                 {
                     b.HasOne("eShop.Core.Models.Product", "Product")
-                        .WithMany("Variants")
+                        .WithMany("ProductVariants")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("eShop.Core.Models.Size", null)
+                    b.HasOne("eShop.Core.Models.Size", "Size")
                         .WithMany("ProductVariants")
                         .HasForeignKey("SizeId");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Size");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.WishList", b =>
+                {
+                    b.HasOne("eShop.Core.Models.Product", null)
+                        .WithMany("WishLists")
+                        .HasForeignKey("ProductId");
+
+                    b.HasOne("eShop.Core.Models.ApplicationUser", "User")
+                        .WithOne("WishList")
+                        .HasForeignKey("eShop.Core.Models.WishList", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.WishListItem", b =>
+                {
+                    b.HasOne("eShop.Core.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eShop.Core.Models.WishList", "WishList")
+                        .WithMany("WishListItems")
+                        .HasForeignKey("WishListId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("WishList");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.ApplicationUser", b =>
@@ -1152,6 +1384,8 @@ namespace eShop.EF.Migrations
                     b.Navigation("Cart");
 
                     b.Navigation("Orders");
+
+                    b.Navigation("WishList");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Cart", b =>
@@ -1163,6 +1397,16 @@ namespace eShop.EF.Migrations
                 {
                     b.Navigation("ChildCategories");
 
+                    b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.Coupon", b =>
+                {
+                    b.Navigation("Orders");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.Discount", b =>
+                {
                     b.Navigation("Products");
                 });
 
@@ -1180,9 +1424,22 @@ namespace eShop.EF.Migrations
 
             modelBuilder.Entity("eShop.Core.Models.Product", b =>
                 {
+                    b.Navigation("CartItems");
+
                     b.Navigation("Images");
 
-                    b.Navigation("Variants");
+                    b.Navigation("OrderItems");
+
+                    b.Navigation("ProductVariants");
+
+                    b.Navigation("WishLists");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.ProductVariant", b =>
+                {
+                    b.Navigation("CartItems");
+
+                    b.Navigation("OrderItems");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.ShippingMethod", b =>
@@ -1193,6 +1450,11 @@ namespace eShop.EF.Migrations
             modelBuilder.Entity("eShop.Core.Models.Size", b =>
                 {
                     b.Navigation("ProductVariants");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.WishList", b =>
+                {
+                    b.Navigation("WishListItems");
                 });
 #pragma warning restore 612, 618
         }

@@ -51,12 +51,10 @@ namespace eShop.Core.Models
         // Foreign Keys
         public string UserId { get; set; }
         public int? ShippingMethodId { get; set; }
-        public int? CouponId { get; set; }
 
         // Navigation Properties
         public virtual ApplicationUser User { get; set; }
         public virtual ShippingMethod? ShippingMethod { get; set; }
-        public virtual Coupon? Coupon { get; set; }
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
         public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }

@@ -26,7 +26,7 @@ namespace eShop.Api.Controllers
         public async Task<ActionResult<IEnumerable<BannerResponseDto>>> GetBanners()
         {
             var banners = await _unitOfWork.BannerRepository
-                .FindAllAsync(b => b.IsActive && (b.EndDate == null || b.EndDate > DateTime.UtcNow));
+                .FindAllAsync(b => (b.EndDate == null || b.EndDate > DateTime.UtcNow));
             var bannerDtos = _mapper.Map<IEnumerable<BannerResponseDto>>(banners);
             return Ok(bannerDtos);
         }
