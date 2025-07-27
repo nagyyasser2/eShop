@@ -26,7 +26,8 @@ namespace eShop.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateProductDto createProductDto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Create([FromForm] CreateProductDto createProductDto)
         {
             using var transaction = unitOfWork.BeginTransaction();
             try

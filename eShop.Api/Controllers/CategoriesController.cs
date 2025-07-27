@@ -77,7 +77,7 @@ namespace eShop.Api.Controllers
         public async Task<ActionResult<IEnumerable<CategorySummaryDto>>> GetCategoriesSummary()
         {
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync(
-                new[] { nameof(Category.ParentCategory), nameof(Category.Products) });
+                new[] { nameof(Category.ParentCategory) });
             var categorySummaryDtos = _mapper.Map<IEnumerable<CategorySummaryDto>>(categories);
             return Ok(categorySummaryDtos);
         }
@@ -90,8 +90,8 @@ namespace eShop.Api.Controllers
                 c => c.ParentCategoryId == null ,
                 new[] { nameof(Category.ChildCategories) });
 
-            var categoryTreeDtos = _mapper.Map<IEnumerable<CategoryTreeDto>>(rootCategories);
-            return Ok(categoryTreeDtos);
+            //var categoryTreeDtos = _mapper.Map<IEnumerable<CategoryTreeDto>>(rootCategories);
+            return Ok(rootCategories);
         }
 
         // GET: api/Categories/active
