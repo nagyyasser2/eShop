@@ -22,6 +22,16 @@ namespace eShop.Core.Mapper
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id)) // Map Id explicitly
                 .ForMember(dest => dest.ProductId, opt => opt.Ignore()) // Ignore ProductId (not in UpdateVariantDTO)
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+            // CreateVariantDTO -> UpdateVariantDTO
+            CreateMap<CreateVariantDTO, UpdateVariantDTO>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore()) // CreateVariantDTO doesn't contain Id
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+            // UpdateVariantDTO -> CreateVariantDTO
+            CreateMap<UpdateVariantDTO, CreateVariantDTO>()
+                .ForMember(dest => dest.ProductId, opt => opt.Ignore()) // ProductId might not be in UpdateVariantDTO
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
         }
     }
 }

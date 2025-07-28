@@ -73,7 +73,8 @@ namespace eShop.Core.DTOs
         public string? Dimensions { get; set; }
         public string? Tags { get; set; }
         public int? CategoryId { get; set; }
-
+        public IList<UpdateVariantDTO>? Variants { get; set; }
+        
         // File uploads for new images
         public IList<IFormFile>? NewImages { get; set; }
 

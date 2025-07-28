@@ -32,25 +32,21 @@ namespace eShop.Api.Controllers
             using var transaction = unitOfWork.BeginTransaction();
             try
             {
-                // Validate the model
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
                 }
 
-                // Check if SKU already exists
                 var existingSku = await productService.ProductExistsBySKUAsync(createProductDto.SKU);
                 if (existingSku)
                 {
                     return BadRequest(new { message = "A product with this SKU already exists." });
                 }
 
-                // Create the product
                 var product = mapper.Map<Product>(createProductDto);
                 var createdProduct = await unitOfWork.ProductRepository.AddAsync(product);
                 await unitOfWork.SaveChangesAsync();
 
-                // Handle image uploads if provided
                 List<string> uploadedImagePaths = new List<string>();
                 if (createProductDto.Images != null && createProductDto.Images.Any())
                 {
@@ -77,7 +73,6 @@ namespace eShop.Api.Controllers
                     }
                     catch (Exception fileEx)
                     {
-                        // Clean up uploaded files on error
                         foreach (var path in uploadedImagePaths)
                         {
                             await fileService.DeleteFileAsync(path);
@@ -86,7 +81,6 @@ namespace eShop.Api.Controllers
                     }
                 }
 
-                //// Handle variant creation if provided
                 if (createProductDto.Variants != null && createProductDto.Variants.Any())
                 {
                     try
@@ -99,7 +93,6 @@ namespace eShop.Api.Controllers
                     }
                     catch (Exception variantEx)
                     {
-                        // Clean up uploaded files on error
                         foreach (var path in uploadedImagePaths)
                         {
                             await fileService.DeleteFileAsync(path);
@@ -108,10 +101,9 @@ namespace eShop.Api.Controllers
                     }
                 }
 
-                // Commit transaction
                 await unitOfWork.CommitTransactionAsync();
-
-                return Ok(product);
+                var productDto = mapper.Map<ProductDTO>(createdProduct);
+                return Ok(productDto);
             }
             catch (Exception ex)
             {
@@ -173,6 +165,7 @@ namespace eShop.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(int id, [FromForm] UpdateProductDto updateProductDto)
         {
             using var transaction = unitOfWork.BeginTransaction();
@@ -188,21 +181,18 @@ namespace eShop.Api.Controllers
                     return BadRequest(ModelState);
                 }
 
-                // Check if product exists
                 if (!await ProductExists(id))
                 {
                     return NotFound(new { message = $"Product with ID {id} not found." });
                 }
 
-                // Check if SKU already exists for another product
                 var existingSku = await productService.ProductExistsBySKUAsync(updateProductDto.SKU, id);
                 if (existingSku)
                 {
                     return BadRequest(new { message = "A product with this SKU already exists." });
                 }
 
-                // Get existing product with images for cleanup
-                var existingProduct = await unitOfWork.ProductRepository.GetByIdAsync(id, new[] { "Images" });
+                var existingProduct = await unitOfWork.ProductRepository.GetByIdAsync(id, new[] { "Images", "Variants" });
                 var imagesToDelete = new List<string>();
 
                 // Handle image deletions
@@ -220,15 +210,11 @@ namespace eShop.Api.Controllers
                 }
 
                 // Update product basic information
-                var productUpdateDto = mapper.Map<CreateProductDto>(updateProductDto);
-                var updatedProduct = await productService.UpdateProductAsync(productUpdateDto);
+                var product = mapper.Map(updateProductDto, existingProduct);
+                var updatedProduct = await unitOfWork.ProductRepository.UpdateAsync(product);
+                await unitOfWork.SaveChangesAsync();
 
-                if (updatedProduct == null)
-                {
-                    return NotFound(new { message = $"Product with ID {id} not found." });
-                }
-
-                // Handle new image uploads
+                // Handle new images
                 List<string> uploadedImagePaths = new List<string>();
                 if (updateProductDto.NewImages != null && updateProductDto.NewImages.Any())
                 {
@@ -246,7 +232,7 @@ namespace eShop.Api.Controllers
                                 ProductId = id,
                                 Url = imagePaths[i],
                                 AltText = $"{updatedProduct.Name} - Image {existingImagesCount + i + 1}",
-                                IsPrimary = existingImagesCount == 0 && i == 0, // Set as primary if no existing images
+                                IsPrimary = existingImagesCount == 0 && i == 0,
                                 SortOrder = existingImagesCount + i
                             };
 
@@ -257,7 +243,6 @@ namespace eShop.Api.Controllers
                     }
                     catch (Exception fileEx)
                     {
-                        // Clean up uploaded files on error
                         foreach (var path in uploadedImagePaths)
                         {
                             await fileService.DeleteFileAsync(path);
@@ -266,16 +251,90 @@ namespace eShop.Api.Controllers
                     }
                 }
 
-                // Commit transaction
+                // Handle variants - FIXED LOGIC
+                if (updateProductDto.Variants != null && updateProductDto.Variants.Any())
+                {
+                    try
+                    {
+                        // Get all existing variant IDs
+                        var existingVariantIds = existingProduct.Variants.Select(v => v.Id).ToHashSet();
+                        var processedVariantIds = new HashSet<int>();
+
+                        foreach (var variantDto in updateProductDto.Variants)
+                        {
+                            if (variantDto.Id < 0)
+                            {
+                                // This is a variant marked for deletion (negative ID)
+                                var variantIdToDelete = Math.Abs(variantDto.Id);
+                                var deleted = await variantService.DeleteVariantAsync(variantIdToDelete);
+                                if (!deleted)
+                                {
+                                    throw new Exception($"Failed to delete variant with ID {variantIdToDelete}");
+                                }
+                                processedVariantIds.Add(variantIdToDelete);
+                            }
+                            else if (variantDto.Id > 0)
+                            {
+                                // This is an existing variant to update
+                                var updatedVariant = await variantService.UpdateVariantAsync(variantDto);
+                                if (updatedVariant == null)
+                                {
+                                    throw new Exception($"Failed to update variant with ID {variantDto.Id}");
+                                }
+                                processedVariantIds.Add(variantDto.Id);
+                            }
+                            else
+                            {
+                                // This is a new variant (ID = 0)
+                                var createVariantDto = mapper.Map<CreateVariantDTO>(variantDto);
+                                createVariantDto.ProductId = id;
+                                var newVariant = await variantService.CreateVariantAsync(createVariantDto);
+                                if (newVariant == null)
+                                {
+                                    throw new Exception("Failed to create new variant");
+                                }
+                            }
+                        }
+
+                        // Delete any variants that weren't included in the update (removed from frontend)
+                        var variantsToDelete = existingVariantIds.Except(processedVariantIds).ToList();
+                        foreach (var variantId in variantsToDelete)
+                        {
+                            var deleted = await variantService.DeleteVariantAsync(variantId);
+                            if (!deleted)
+                            {
+                                throw new Exception($"Failed to delete variant with ID {variantId}");
+                            }
+                        }
+                    }
+                    catch (Exception variantEx)
+                    {
+                        // Clean up uploaded images on variant error
+                        foreach (var path in uploadedImagePaths)
+                        {
+                            await fileService.DeleteFileAsync(path);
+                        }
+                        throw new Exception($"Error processing variants: {variantEx.Message}", variantEx);
+                    }
+                }
+                else
+                {
+                    // If no variants provided, delete all existing variants
+                    var existingVariantIds = existingProduct.Variants.Select(v => v.Id).ToList();
+                    foreach (var variantId in existingVariantIds)
+                    {
+                        await variantService.DeleteVariantAsync(variantId);
+                    }
+                }
+
                 await unitOfWork.CommitTransactionAsync();
 
-                // Clean up deleted image files after successful transaction
+                // Clean up deleted images after successful transaction
                 foreach (var imagePath in imagesToDelete)
                 {
                     await fileService.DeleteFileAsync(imagePath);
                 }
 
-                // Return updated product
                 var finalProduct = await productService.GetProductByIdAsync(id);
                 return Ok(finalProduct);
             }
@@ -297,11 +356,9 @@ namespace eShop.Api.Controllers
                     return NotFound(new { message = $"Product with ID {id} not found." });
                 }
 
-                // Get product with all related images before deletion
                 var product = await unitOfWork.ProductRepository.GetByIdAsync(id, new[] { "Images" });
                 var imagePaths = product.Images.Select(img => img.Url).ToList();
 
-                // Delete the product (this will cascade delete images due to foreign key)
                 var deleted = await productService.DeleteProductAsync(id);
 
                 if (!deleted)
@@ -309,10 +366,8 @@ namespace eShop.Api.Controllers
                     return StatusCode(500, new { message = "Failed to delete the product." });
                 }
 
-                // Commit transaction
                 await unitOfWork.CommitTransactionAsync();
 
-                // Clean up image files after successful deletion
                 foreach (var imagePath in imagePaths)
                 {
                     await fileService.DeleteFileAsync(imagePath);
@@ -324,90 +379,6 @@ namespace eShop.Api.Controllers
             {
                 await unitOfWork.RollbackTransactionAsync();
                 return StatusCode(500, new { message = "An error occurred while deleting the product.", error = ex.Message });
-            }
-        }
-
-        [HttpPatch("{id}/toggle-status")]
-        public async Task<IActionResult> ToggleStatus(int id)
-        {
-            using var transaction = unitOfWork.BeginTransaction();
-            try
-            {
-                if (!await ProductExists(id))
-                {
-                    return NotFound(new { message = $"Product with ID {id} not found." });
-                }
-
-                var result = await productService.ToggleProductStatusAsync(id);
-
-                if (!result)
-                {
-                    return StatusCode(500, new { message = "Failed to toggle product status." });
-                }
-
-                await unitOfWork.CommitTransactionAsync();
-                return Ok(new { message = "Product status toggled successfully." });
-            }
-            catch (Exception ex)
-            {
-                await unitOfWork.RollbackTransactionAsync();
-                return StatusCode(500, new { message = "An error occurred while toggling product status.", error = ex.Message });
-            }
-        }
-
-        [HttpPatch("{id}/toggle-featured")]
-        public async Task<IActionResult> ToggleFeatured(int id)
-        {
-            using var transaction = unitOfWork.BeginTransaction();
-            try
-            {
-                if (!await ProductExists(id))
-                {
-                    return NotFound(new { message = $"Product with ID {id} not found." });
-                }
-
-                var result = await productService.ToggleFeaturedStatusAsync(id);
-
-                if (!result)
-                {
-                    return StatusCode(500, new { message = "Failed to toggle featured status." });
-                }
-
-                await unitOfWork.CommitTransactionAsync();
-                return Ok(new { message = "Product featured status toggled successfully." });
-            }
-            catch (Exception ex)
-            {
-                await unitOfWork.RollbackTransactionAsync();
-                return StatusCode(500, new { message = "An error occurred while toggling featured status.", error = ex.Message });
-            }
-        }
-
-        [HttpPatch("{id}/stock")]
-        public async Task<IActionResult> UpdateStock(int id, [FromBody] UpdateStockDto updateStockDto)
-        {
-            using var transaction = unitOfWork.BeginTransaction();
-            try
-            {
-                if (!await ProductExists(id))
-                {
-                    return NotFound(new { message = $"Product with ID {id} not found." });
-                }
-
-                var result = await productService.UpdateStockQuantityAsync(id, updateStockDto.Quantity);
-
-                if (!result)
-                {
-                    return StatusCode(500, new { message = "Failed to update stock quantity." });
-                }
-
-                await unitOfWork.CommitTransactionAsync();
-                return Ok(new { message = "Stock quantity updated successfully." });
-            }
-            catch (Exception ex)
-            {
-                await unitOfWork.RollbackTransactionAsync();
-                return StatusCode(500, new { message = "An error occurred while updating stock quantity.", error = ex.Message });
             }
         }
 
