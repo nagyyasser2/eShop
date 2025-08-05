@@ -3,6 +3,7 @@ using eShop.Core.DTOs;
 using eShop.Core.Models;
 using eShop.Core.Services.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq.Expressions;
 
 namespace eShop.Api.Controllers
 {
@@ -113,30 +114,40 @@ namespace eShop.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get([FromQuery] bool? featured = null, [FromQuery] bool? active = null, [FromQuery] int? categoryId = null)
+        public async Task<IActionResult> Get(
+            [FromQuery] bool? featured = null,
+            [FromQuery] bool? active = null,
+            [FromQuery] int? categoryId = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
             try
             {
-                IEnumerable<CreateProductDto> products;
+                // Ensure page and pageSize are valid
+                if (page < 1) page = 1;
+                if (pageSize < 1) pageSize = 10;
 
-                if (featured.HasValue && featured.Value)
+                int skip = (page - 1) * pageSize;
+
+                // Build the filter expression
+                Expression<Func<Product, bool>> filter = p => true; // Default: no filter
+                if (featured.HasValue)
                 {
-                    products = await productService.GetFeaturedProductsAsync();
+                    filter = p => p.IsFeatured == featured.Value; // Handle both true (featured) and false (non-featured)
                 }
-                else if (active.HasValue && active.Value)
+                else if (active.HasValue)
                 {
-                    products = await productService.GetActiveProductsAsync();
+                    filter = p => p.IsActive == active.Value; // Handle both true (active) and false (inactive)
                 }
                 else if (categoryId.HasValue)
                 {
-                    products = await productService.GetProductsByCategoryAsync(categoryId.Value);
-                }
-                else
-                {
-                    products = await productService.GetAllProductsAsync();
+                    filter = p => p.CategoryId == categoryId.Value;
                 }
 
-                return Ok(new { data = products, count = products.Count() });
+                // Get filtered and paginated products with total count
+                var (products, totalCount) = await productService.GetFilteredPagedAsync(filter, skip, pageSize);
+
+                return Ok(new { data = products, count = totalCount, page, pageSize });
             }
             catch (Exception ex)
             {
@@ -205,7 +216,7 @@ namespace eShop.Api.Controllers
                     foreach (var image in imagesToRemove)
                     {
                         imagesToDelete.Add(image.Url);
-                        unitOfWork.ImageRepository.Remove(image);
+                        await unitOfWork.ImageRepository.RemoveAsync(image);
                     }
                 }
 

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 
 namespace eShop.Core.Services.Abstractions
 {
@@ -16,6 +11,8 @@ namespace eShop.Core.Services.Abstractions
         Task<IEnumerable<T>> GetAllAsync(string[]? includes = null);
         IEnumerable<T> GetAllPaged(int skip, int take, string[]? includes = null);
         Task<IEnumerable<T>> GetAllPagedAsync(int skip, int take, string[]? includes = null);
+        IEnumerable<T> GetFilteredPaged(Expression<Func<T, bool>> match, int skip, int take, string[]? includes = null);
+        Task<IEnumerable<T>> GetFilteredPagedAsync(Expression<Func<T, bool>> match, int skip, int take, string[]? includes = null);
         T? Find(Expression<Func<T, bool>> match, string[]? includes = null);
         Task<T?> FindAsync(Expression<Func<T, bool>> match, string[]? includes = null);
         IEnumerable<T>? FindAll(Expression<Func<T, bool>> match, string[]? includes = null);

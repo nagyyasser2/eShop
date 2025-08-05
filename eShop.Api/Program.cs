@@ -11,6 +11,7 @@ using eShop.EF;
 using System.Text.Json.Serialization;
 using eShop.Core.Mapper;
 using eShop.EF.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,7 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddAutoMapper(typeof(BannerProfile));
 builder.Services.AddAutoMapper(typeof(VariantProfileMapping));
 builder.Services.AddAutoMapper(typeof(ProductMappingProfile));
+builder.Services.AddAutoMapper(typeof(CategoryMappingProfile));
 
 // Add Identity Services
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

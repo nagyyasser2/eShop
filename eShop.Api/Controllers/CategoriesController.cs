@@ -86,11 +86,8 @@ namespace eShop.Api.Controllers
         [HttpGet("tree")]
         public async Task<ActionResult<IEnumerable<CategoryTreeDto>>> GetCategoriesTree()
         {
-            var rootCategories = await _unitOfWork.CategoryRepository.FindAllAsync(
-                c => c.ParentCategoryId == null ,
-                new[] { nameof(Category.ChildCategories) });
-
-            //var categoryTreeDtos = _mapper.Map<IEnumerable<CategoryTreeDto>>(rootCategories);
+            var rootCategories = await _unitOfWork.CategoryRepository.GetCategoryTreeAsync();
+            var categoryTreeDtos = _mapper.Map<IEnumerable<CategoryTreeDto>>(rootCategories);
             return Ok(rootCategories);
         }
 

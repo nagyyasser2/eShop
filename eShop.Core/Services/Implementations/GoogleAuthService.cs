@@ -85,6 +85,56 @@ namespace eShop.Core.Services.Implementations
 
             return JsonSerializer.Deserialize<GoogleTokenResponse>(json, options);
         }
+
+        public async Task<GoogleUserInfo?> ValidateGoogleJwtAsync(string jwtToken)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+
+                // Verify the token with Google
+                var response = await httpClient.GetAsync($"https://oauth2.googleapis.com/tokeninfo?id_token={jwtToken}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                var tokenInfo = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent);
+
+                if (tokenInfo == null)
+                {
+                    return null;
+                }
+
+                var clientId = _configuration["Authentication:Google:ClientId"];
+
+                // Verify the audience (your client ID)
+                if (!tokenInfo.ContainsKey("aud") ||
+                    tokenInfo["aud"].ToString() != clientId)
+                {
+                    return null;
+                }
+
+                // Extract user information
+                return new GoogleUserInfo
+                {
+                    Id = tokenInfo.GetValueOrDefault("sub")?.ToString() ?? "",
+                    Email = tokenInfo.GetValueOrDefault("email")?.ToString() ?? "",
+                    VerifiedEmail = bool.Parse(tokenInfo.GetValueOrDefault("email_verified")?.ToString() ?? "false"),
+                    GivenName = tokenInfo.GetValueOrDefault("given_name")?.ToString() ?? "",
+                    FamilyName = tokenInfo.GetValueOrDefault("family_name")?.ToString() ?? "",
+                    Picture = tokenInfo.GetValueOrDefault("picture")?.ToString() ?? ""
+                };
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                Console.WriteLine($"Error validating Google JWT: {ex.Message}");
+                return null;
+            }
+        }
     }
 
 }

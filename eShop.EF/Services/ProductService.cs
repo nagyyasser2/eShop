@@ -1,13 +1,8 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
 using eShop.Core.DTOs;
 using eShop.Core.Models;
 using eShop.Core.Services.Abstractions;
-using eShop.Core.Services.Implementations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace eShop.EF.Services
 {
@@ -27,54 +22,47 @@ namespace eShop.EF.Services
         public async Task<ProductDTO?> GetProductByIdAsync(int id)
         {
             var product = await _unitOfWork.ProductRepository.GetByIdAsync(id, new[] { "Category", "Images", "Variants" });
-
             return _mapper.Map<ProductDTO>(product);
         }
 
-        public async Task<IEnumerable<CreateProductDto>> GetAllProductsAsync()
+        public async Task<(IEnumerable<ProductDTO> Products, int TotalCount)> GetFilteredPagedAsync(
+            Expression<Func<Product, bool>> filter,
+            int skip,
+            int take,
+            string[]? includes = null)
         {
-            var products = await _unitOfWork.ProductRepository.GetAllAsync(new[] { "Category", "Images", "Variants" });
-            return _mapper.Map<IEnumerable<CreateProductDto>>(products);
+            // Default includes if none provided
+            includes ??= new[] { "Category", "Images", "Variants" };
+
+            // Get filtered and paginated products
+            var products = await _unitOfWork.ProductRepository.GetFilteredPagedAsync(filter, skip, take, includes);
+
+            // Get total count for pagination
+            var totalCount = await _unitOfWork.ProductRepository.CountAsync(filter);
+
+            // Map to DTOs
+            var productDtos = _mapper.Map<IEnumerable<ProductDTO>>(products);
+
+            return (productDtos, totalCount);
         }
 
-        public async Task<IEnumerable<CreateProductDto>> GetActiveProductsAsync()
-        {
-            var products = await _unitOfWork.ProductRepository.FindAllAsync(p => p.IsActive, new[] { "Category", "Images", "Variants" });
-            return _mapper.Map<IEnumerable<CreateProductDto>>(products);
-        }
-
-        public async Task<IEnumerable<CreateProductDto>> GetFeaturedProductsAsync()
-        {
-            var products = await _unitOfWork.ProductRepository.FindAllAsync(p => p.IsFeatured && p.IsActive, new[] { "Category", "Images", "Variants" });
-            return _mapper.Map<IEnumerable<CreateProductDto>>(products);
-        }
-
-        public async Task<IEnumerable<CreateProductDto>> GetProductsByCategoryAsync(int categoryId)
-        {
-            var products = await _unitOfWork.ProductRepository.FindAllAsync(p => p.CategoryId == categoryId && p.IsActive, new[] { "Category", "Images", "Variants" });
-            return _mapper.Map<IEnumerable<CreateProductDto>>(products);
-        }
-
-        public async Task<CreateProductDto> CreateProductAsync(CreateProductDto productDto)
+        public async Task<ProductDTO> CreateProductAsync(CreateProductDto productDto)
         {
             var product = _mapper.Map<Product>(productDto);
-
             var createdProduct = await _unitOfWork.ProductRepository.AddAsync(product);
             await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<CreateProductDto>(createdProduct);
+            return _mapper.Map<ProductDTO>(createdProduct);
         }
 
-        public async Task<CreateProductDto?> UpdateProductAsync(CreateProductDto productDto)
+        public async Task<ProductDTO?> UpdateProductAsync(UpdateProductDto productDto)
         {
             var existingProduct = await _unitOfWork.ProductRepository.GetByIdAsync(productDto.Id);
             if (existingProduct == null) return null;
 
             _mapper.Map(productDto, existingProduct);
-
             var updatedProduct = _unitOfWork.ProductRepository.Update(existingProduct);
             await _unitOfWork.SaveChangesAsync();
-
-            return _mapper.Map<CreateProductDto>(updatedProduct);
+            return _mapper.Map<ProductDTO>(updatedProduct);
         }
 
         public async Task<bool> DeleteProductAsync(int id)
@@ -135,12 +123,10 @@ namespace eShop.EF.Services
         public async Task<bool> ProductExistsBySKUAsync(string sku, int? excludeProductId = null)
         {
             var products = await _unitOfWork.ProductRepository.FindAllAsync(p => p.SKU == sku);
-
             if (excludeProductId.HasValue)
             {
                 products = products.Where(p => p.Id != excludeProductId.Value);
             }
-
             return products.Any();
         }
     }

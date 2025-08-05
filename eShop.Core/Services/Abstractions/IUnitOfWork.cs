@@ -5,7 +5,7 @@ namespace eShop.Core.Services.Abstractions
 {
     public interface IUnitOfWork : IDisposable
     {
-        IBaseRepository<Category> CategoryRepository { get; }
+        ICategoryRepository CategoryRepository { get; }
         IBaseRepository<Product> ProductRepository { get; }
         IBaseRepository<Order> OrderRepository { get; }
         IBaseRepository<Banner> BannerRepository { get; } 

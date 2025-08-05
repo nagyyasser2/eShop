@@ -149,7 +149,53 @@ namespace eShop.Core.Services.Implementations
             }
             return await query.Where(match).ToListAsync();
         }
+        public IEnumerable<T> GetFilteredPaged(
+        Expression<Func<T, bool>> match,
+        int skip,
+        int take,
+        string[]? includes = null)
+        {
+            IQueryable<T> query = _dbSet;
 
+            // Apply includes (eager loading) if provided
+            if (includes != null)
+            {
+                foreach (var include in includes)
+                {
+                    query = query.Include(include);
+                }
+            }
+
+            // Apply filter
+            query = query.Where(match);
+
+            // Apply pagination
+            return query.Skip(skip).Take(take).ToList();
+        }
+
+        public async Task<IEnumerable<T>> GetFilteredPagedAsync(
+            Expression<Func<T, bool>> match,
+            int skip,
+            int take,
+            string[]? includes = null)
+        {
+            IQueryable<T> query = _dbSet;
+
+            // Apply includes (eager loading) if provided
+            if (includes != null)
+            {
+                foreach (var include in includes)
+                {
+                    query = query.Include(include);
+                }
+            }
+
+            // Apply filter
+            query = query.Where(match);
+
+            // Apply pagination
+            return await query.Skip(skip).Take(take).ToListAsync();
+        }
         public bool Any(Expression<Func<T, bool>> match)
         {
             return _dbSet.Any(match);

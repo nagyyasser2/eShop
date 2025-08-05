@@ -8,5 +8,6 @@ namespace eShop.Core.Services.Abstractions
         Task<GoogleUserInfo> GetUserInfoAsync(string accessToken);
         Task<GoogleTokenResponse> ExchangeCodeForTokenAsync(string code, string redirectUri);
         Task<GoogleTokenResponse> RefreshTokenAsync(string refreshToken);
+        Task<GoogleUserInfo?> ValidateGoogleJwtAsync(string jwtToken);
     }
 }

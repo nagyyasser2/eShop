@@ -5,7 +5,6 @@ namespace eShop.Core.DTOs
 {
     public class CreateProductDto
     {
-        public int Id { get; set; }
         [Required, MaxLength(200)]
         public string Name { get; set; }
 
@@ -108,7 +107,7 @@ namespace eShop.Core.DTOs
         public string? Tags { get; set; }
         public DateTime CreatedAt { get; set; }
         public int? CategoryId { get; set; }
-        public CategoryDto? Category { get; set; }
+        public CategoryDto Category { get; set; }
         public IList<ImageDTO> Images { get; set; } = new List<ImageDTO>();
         public IList<VariantDTO> Variants { get; set; } = new List<VariantDTO>();
     }

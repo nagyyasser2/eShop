@@ -3,6 +3,7 @@ using eShop.Core.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using eShop.EF;
+using eShop.EF.Repositories;
 
 namespace eShop.Core.Services.Implementations
 {
@@ -11,7 +12,7 @@ namespace eShop.Core.Services.Implementations
         private readonly DbContext _context;
         private readonly IBaseRepository<Product> _productRepository;
         private readonly IBaseRepository<Order> _orderRepository;
-        private readonly IBaseRepository<Category> _categoryRepository;
+        private readonly ICategoryRepository _categoryRepository;
         private readonly IBaseRepository<Banner> _bannerRepository;
         private readonly IBaseRepository<Variant> _variantRepository;
         private readonly IBaseRepository<Image> _imageRepository;
@@ -23,7 +24,7 @@ namespace eShop.Core.Services.Implementations
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _productRepository = new BaseRepository<Product>(context);
             _orderRepository = new BaseRepository<Order>(context);
-            _categoryRepository = new BaseRepository<Category>(context);
+            _categoryRepository = new CategoriesRepository(context);
             _bannerRepository = new BaseRepository<Banner>(context);
             _variantRepository = new BaseRepository<Variant>(context);
             _imageRepository = new BaseRepository<Image>(context);
@@ -31,7 +32,7 @@ namespace eShop.Core.Services.Implementations
 
         public IBaseRepository<Product> ProductRepository => _productRepository;
         public IBaseRepository<Order> OrderRepository => _orderRepository;
-        public IBaseRepository<Category> CategoryRepository => _categoryRepository;
+        public ICategoryRepository CategoryRepository => _categoryRepository;
         public IBaseRepository<Banner> BannerRepository => _bannerRepository;
         public IBaseRepository<Variant> VariantRepository => _variantRepository;
         public IBaseRepository<Image> ImageRepository => _imageRepository;
