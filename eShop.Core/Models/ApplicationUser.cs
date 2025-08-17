@@ -20,7 +20,6 @@ namespace eShop.Core.Models
         public string? GoogleId { get; set; }
 
         // Navigation Properties
-        public virtual Cart? Cart { get; set; }
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 }

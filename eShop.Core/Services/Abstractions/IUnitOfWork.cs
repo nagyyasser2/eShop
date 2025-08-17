@@ -11,6 +11,8 @@ namespace eShop.Core.Services.Abstractions
         IBaseRepository<Banner> BannerRepository { get; } 
         IBaseRepository<Variant> VariantRepository { get; }
         IBaseRepository<Image> ImageRepository { get; }
+        IBaseRepository<Payment> PaymentRepository { get; }
+        IBaseRepository<OrderItem> OrderItemRepository { get; }
         IDbContextTransaction BeginTransaction();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();

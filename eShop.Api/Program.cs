@@ -11,7 +11,7 @@ using eShop.EF;
 using System.Text.Json.Serialization;
 using eShop.Core.Mapper;
 using eShop.EF.Services;
-using Microsoft.Extensions.DependencyInjection;
+using eShop.Core.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,17 +31,24 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
+// Configurations
+builder.Services.Configure<EmailConfiguration>(builder.Configuration.GetSection("EmailSettings"));
+
 // Add Unit of Work and Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IVariantService, VariantService>();
+builder.Services.AddSingleton<IEmailSender, EmailSender>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddAutoMapper(typeof(BannerProfile));
 builder.Services.AddAutoMapper(typeof(VariantProfileMapping));
 builder.Services.AddAutoMapper(typeof(ProductMappingProfile));
 builder.Services.AddAutoMapper(typeof(CategoryMappingProfile));
+builder.Services.AddAutoMapper(typeof(OrderProfileMapping));
 
 // Add Identity Services
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

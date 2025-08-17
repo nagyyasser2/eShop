@@ -8,7 +8,7 @@ namespace eShop.Core.Models
     public class Order
     {
         public int Id { get; set; }
-        [Required, MaxLength(50)]
+        [Required, MaxLength(10)]
         public string OrderNumber { get; set; }
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         [Column(TypeName = "decimal(18,2)")]
@@ -32,17 +32,6 @@ namespace eShop.Core.Models
         public string ShippingZipCode { get; set; }
         public string ShippingCountry { get; set; }
         public string? ShippingPhone { get; set; }
-
-        // Billing Address
-        public string BillingFirstName { get; set; }
-        public string BillingLastName { get; set; }
-        public string BillingAddress { get; set; }
-        public string BillingCity { get; set; }
-        public string BillingState { get; set; }
-        public string BillingZipCode { get; set; }
-        public string BillingCountry { get; set; }
-        public string? BillingPhone { get; set; }
-
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
         public DateTime? ShippedAt { get; set; }
@@ -50,11 +39,9 @@ namespace eShop.Core.Models
 
         // Foreign Keys
         public string UserId { get; set; }
-        public int? ShippingMethodId { get; set; }
 
         // Navigation Properties
         public virtual ApplicationUser User { get; set; }
-        public virtual ShippingMethod? ShippingMethod { get; set; }
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
         public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }

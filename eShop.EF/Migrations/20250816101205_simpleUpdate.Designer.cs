@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eShop.EF;
 
@@ -11,9 +12,11 @@ using eShop.EF;
 namespace eShop.EF.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250816101205_simpleUpdate")]
+    partial class simpleUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -324,6 +327,73 @@ namespace eShop.EF.Migrations
                     b.ToTable("Banners");
                 });
 
+            modelBuilder.Entity("eShop.Core.Models.Cart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
+
+                    b.ToTable("Carts");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.CartItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CartId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProductVariantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CartId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.ToTable("CartItems");
+                });
+
             modelBuilder.Entity("eShop.Core.Models.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -419,8 +489,8 @@ namespace eShop.EF.Migrations
 
                     b.Property<string>("OrderNumber")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("ShippedAt")
                         .HasColumnType("datetime2");
@@ -838,6 +908,40 @@ namespace eShop.EF.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("eShop.Core.Models.Cart", b =>
+                {
+                    b.HasOne("eShop.Core.Models.ApplicationUser", "User")
+                        .WithOne("Cart")
+                        .HasForeignKey("eShop.Core.Models.Cart", "UserId");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.CartItem", b =>
+                {
+                    b.HasOne("eShop.Core.Models.Cart", "Cart")
+                        .WithMany("CartItems")
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eShop.Core.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eShop.Core.Models.Variant", "ProductVariant")
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId");
+
+                    b.Navigation("Cart");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ProductVariant");
+                });
+
             modelBuilder.Entity("eShop.Core.Models.Category", b =>
                 {
                     b.HasOne("eShop.Core.Models.Category", "ParentCategory")
@@ -937,7 +1041,14 @@ namespace eShop.EF.Migrations
 
             modelBuilder.Entity("eShop.Core.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("Cart");
+
                     b.Navigation("Orders");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.Cart", b =>
+                {
+                    b.Navigation("CartItems");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Category", b =>
