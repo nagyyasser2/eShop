@@ -1,4 +1,4 @@
-﻿using eShopApi.Core.Enums;
+﻿using eShop.Core.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
@@ -10,8 +10,6 @@ namespace eShop.Core.Models
         public int Id { get; set; }
         [Required, MaxLength(10)]
         public string OrderNumber { get; set; }
-        public OrderStatus Status { get; set; } = OrderStatus.Pending;
-        [Column(TypeName = "decimal(18,2)")]
         public decimal SubTotal { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal TaxAmount { get; set; }
@@ -36,6 +34,11 @@ namespace eShop.Core.Models
         public DateTime? UpdatedAt { get; set; }
         public DateTime? ShippedAt { get; set; }
         public DateTime? DeliveredAt { get; set; }
+
+        // Order Status
+        public ShippingStatus ShippingStatus { get; set; } = ShippingStatus.Pending;
+        [Column(TypeName = "decimal(18,2)")]
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
 
         // Foreign Keys
         public string UserId { get; set; }

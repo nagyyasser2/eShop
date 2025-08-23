@@ -3,7 +3,7 @@ using eShop.Core.DTOs;
 using eShop.Core.Services.Abstractions;
 using eShop.Core.Models;
 
-namespace eShop.EF.Services
+namespace eShop.Core.Services.Implementations
 {
     public class ImageService : IImageService
     {

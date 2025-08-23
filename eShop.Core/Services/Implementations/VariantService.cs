@@ -3,9 +3,9 @@ using eShop.Core.DTOs;
 using eShop.Core.Models;
 using eShop.Core.Services.Abstractions;
 
-namespace eShop.EF.Services
+namespace eShop.Core.Services.Implementations
 {
-    public class VariantService: IVariantService
+    public class VariantService : IVariantService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -79,4 +79,4 @@ namespace eShop.EF.Services
             return true;
         }
     }
-}
+    }

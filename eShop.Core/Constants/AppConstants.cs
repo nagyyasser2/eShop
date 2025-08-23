@@ -4,11 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace eShopApi.Core.Enums
+namespace eShop.Core.Constants
 {
-    public enum DiscountType
+    class AppConstants
     {
-        Percentage,
-        FixedAmount
     }
 }

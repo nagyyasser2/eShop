@@ -10,8 +10,8 @@ using System.Text;
 using eShop.EF;
 using System.Text.Json.Serialization;
 using eShop.Core.Mapper;
-using eShop.EF.Services;
 using eShop.Core.Configurations;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,16 +33,22 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Configurations
 builder.Services.Configure<EmailConfiguration>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
+
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
 // Add Unit of Work and Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IFileService, FileService>();
-builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IFileService, eShop.Core.Services.Implementations.FileService>();
+builder.Services.AddScoped<IProductService, eShop.Core.Services.Implementations.ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IVariantService, VariantService>();
+builder.Services.AddScoped<IStripeService, StripeService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
+builder.Services.AddHostedService<EmailBackgroundService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddAutoMapper(typeof(BannerProfile));
 builder.Services.AddAutoMapper(typeof(VariantProfileMapping));

@@ -2,7 +2,7 @@
 using eShop.Core.DTOs;
 using eShop.Core.Models;
 using eShop.Core.Services.Abstractions;
-using eShopApi.Core.Enums;
+using eShop.Core.Enums;
 
 namespace eShop.Core.Services.Implementations
 {
@@ -47,6 +47,73 @@ namespace eShop.Core.Services.Implementations
             }
         }
 
+        public async Task<OrderDto> CancelOrderAsync(int orderId, string? cancellationReason = null)
+        {
+            await using var transaction = _unitOfWork.BeginTransaction();
+
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId, new[] { nameof(Order.OrderItems) });
+                if (order == null)
+                    throw new KeyNotFoundException($"Order with ID {orderId} not found.");
+
+                // Check if order can be cancelled
+                if (order.ShippingStatus == ShippingStatus.Shipped ||
+                    order.ShippingStatus == ShippingStatus.Delivered ||
+                    order.ShippingStatus == ShippingStatus.Cancelled)
+                {
+                    throw new InvalidOperationException($"Cannot cancel order with status: {order.ShippingStatus}");
+                }
+
+                // Update order status
+                order.ShippingStatus = ShippingStatus.Cancelled;
+                order.PaymentStatus = PaymentStatus.Cancelled;
+                order.UpdatedAt = DateTime.UtcNow;
+                order.Notes = string.IsNullOrEmpty(order.Notes)
+                    ? $"Cancelled: {cancellationReason}"
+                    : $"{order.Notes}\nCancelled: {cancellationReason}";
+
+                // Restore stock quantities
+                await RestoreStockQuantitiesAsync(order.OrderItems);
+
+                _unitOfWork.OrderRepository.Update(order);
+                await _unitOfWork.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return _mapper.Map<OrderDto>(order);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        private async Task RestoreStockQuantitiesAsync(ICollection<OrderItem> orderItems)
+        {
+            foreach (var item in orderItems)
+            {
+                if (item.ProductVariantId.HasValue)
+                {
+                    var variantDto = await _variantService.GetVariantByIdAsync(item.ProductVariantId.Value);
+                    if (variantDto != null)
+                    {
+                        await _variantService.UpdateStockQuantityAsync(item.ProductVariantId.Value,
+                            variantDto.StockQuantity + item.Quantity);
+                    }
+                }
+                else
+                {
+                    var productDto = await _productService.GetProductByIdAsync(item.ProductId);
+                    if (productDto != null)
+                    {
+                        await _productService.UpdateStockQuantityAsync(item.ProductId,
+                            productDto.StockQuantity + item.Quantity);
+                    }
+                }
+            }
+        }
+        
         private async Task ValidateOrderItemsAsync(CreateOrderDto orderDto)
         {
             if (orderDto.OrderItems == null || !orderDto.OrderItems.Any())
@@ -152,17 +219,18 @@ namespace eShop.Core.Services.Implementations
             return await _unitOfWork.OrderRepository.GetAllAsync(includes);
         }
 
-        public async Task<Order> UpdateOrderStatusAsync(int orderId, OrderStatus status)
+        public async Task<Order> UpdateOrderStatusAsync(int orderId, ShippingStatus status)
         {
             var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
             if (order == null)
                 throw new KeyNotFoundException($"Order with ID {orderId} not found.");
 
-            order.Status = status;
+            order.ShippingStatus = status;
             order.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.OrderRepository.Update(order);
             await _unitOfWork.SaveChangesAsync();
+
 
             return order;
         }

@@ -1,4 +1,4 @@
-﻿using eShopApi.Core.Enums;
+﻿using eShop.Core.Enums;
 
 namespace eShop.Core.DTOs
 {
@@ -6,7 +6,8 @@ namespace eShop.Core.DTOs
     {
         public int Id { get; set; }
         public string OrderNumber { get; set; }
-        public OrderStatus Status { get; set; }
+        public ShippingStatus ShippingStatus { get; set; }
+        public PaymentStatus PaymentStatus { get; set; }
         public decimal SubTotal { get; set; }
         public decimal TaxAmount { get; set; }
         public decimal ShippingAmount { get; set; }
@@ -53,7 +54,8 @@ namespace eShop.Core.DTOs
 
     public class UpdateOrderDto
     {
-        public OrderStatus? Status { get; set; }
+        public ShippingStatus? Status { get; set; }
+        public PaymentStatus? PaymentStatus { get; set; }
         public decimal? SubTotal { get; set; }
         public decimal? TaxAmount { get; set; }
         public decimal? ShippingAmount { get; set; }

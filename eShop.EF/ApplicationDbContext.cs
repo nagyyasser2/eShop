@@ -53,7 +53,6 @@ namespace eShop.EF
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Page> Pages { get; set; }
         public DbSet<Payment> Payments { get; set; }
-        public DbSet<PaymentMethod> PaymentMethods { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Image> Images { get; set; }
         public DbSet<Variant> Variants { get; set; }

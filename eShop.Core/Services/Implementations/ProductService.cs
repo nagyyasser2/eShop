@@ -1,10 +1,15 @@
-﻿using System.Linq.Expressions;
-using AutoMapper;
+﻿using AutoMapper;
 using eShop.Core.DTOs;
 using eShop.Core.Models;
 using eShop.Core.Services.Abstractions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace eShop.EF.Services
+namespace eShop.Core.Services.Implementations
 {
     public class ProductService : IProductService
     {

@@ -12,7 +12,7 @@ namespace eShop.Core.Mapper
             CreateMap<CreateOrderDto, Order>()
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.OrderNumber, opt => opt.Ignore())
-                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.ShippingStatus, opt => opt.Ignore())
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.OrderItems, opt => opt.Ignore())
                 .ForMember(dest => dest.Payments, opt => opt.Ignore())

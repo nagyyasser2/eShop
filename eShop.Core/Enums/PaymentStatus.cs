@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 
-namespace eShopApi.Core.Enums
+namespace eShop.Core.Enums
 {
     public enum PaymentStatus
     {
         Pending,
-        Processing,
-        Completed,
+        Paid,
         Failed,
+        CashOnDelivery,
+        Refunded,
         Cancelled,
-        Refunded
+        Disputed,
+        Completed
     }
 }
