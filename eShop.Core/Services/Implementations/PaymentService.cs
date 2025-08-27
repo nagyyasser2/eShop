@@ -1,41 +1,41 @@
-﻿using AutoMapper;
-using eShop.Core.DTOs;
-using eShop.Core.Models;
-using eShop.Core.Services.Abstractions;
-using eShop.Core.Enums;
+﻿using eShop.Core.Services.Abstractions;
 using Microsoft.Extensions.Logging;
-using Stripe;
-using Stripe.Checkout;
-using eShop.Core.DTOs.Payments;
 using Microsoft.Extensions.Options;
 using eShop.Core.Configurations;
+using eShop.Core.DTOs.Payments;
+using eShop.Core.Models;
+using eShop.Core.Enums;
+using eShop.Core.DTOs;
+using Stripe.Checkout;
+using AutoMapper;
+using Stripe;
 
 namespace eShop.Core.Services.Implementations
 {
     public class PaymentService : IPaymentService
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IOptions<StripeSettings> _stripeSettings;
+        private readonly ILogger<PaymentService> _logger;
         private readonly IStripeService _stripeService;
         private readonly IOrderService _orderService;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly ILogger<PaymentService> _logger;
-        private readonly IOptions<StripeSettings> _stripeSettings;
 
         public PaymentService(
-            IUnitOfWork unitOfWork,
+            IOptions<StripeSettings> stripeSettings,
+            ILogger<PaymentService> logger,
             IStripeService stripeService,
             IOrderService orderService,
-            IMapper mapper,
-            ILogger<PaymentService> logger,
-            IOptions<StripeSettings> stripeSettings
+            IUnitOfWork unitOfWork,
+            IMapper mapper
             )
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _stripeSettings = stripeSettings ?? throw new ArgumentNullException(nameof(stripeSettings));
             _stripeService = stripeService ?? throw new ArgumentNullException(nameof(stripeService));
             _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _stripeSettings = stripeSettings ?? throw new ArgumentNullException(nameof(stripeSettings));
         }
 
         public async Task<PaymentDto> CreatePaymentAsync(CreatePaymentDto paymentDto)
@@ -73,7 +73,9 @@ namespace eShop.Core.Services.Implementations
         {
             try
             {
-                var order = await _unitOfWork.OrderRepository.GetByIdAsync(paymentDto.OrderId, new[] { "User" });
+                //var order = await _unitOfWork.OrderRepository.GetByIdAsync(paymentDto.OrderId, new[] { "User" });
+                var  order  = await _orderService.GetOrderByIdAsync(paymentDto.OrderId);
+
                 if (order == null)
                     throw new KeyNotFoundException($"Order with ID {paymentDto.OrderId} not found.");
 
@@ -192,6 +194,86 @@ namespace eShop.Core.Services.Implementations
             catch
             {
                 await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<Session> CreateCheckoutSessionAsync(CreateCheckoutSessionDto checkoutDto)
+        {
+            try
+            {
+                var order = await _orderService.GetOrderByIdAsync(checkoutDto.OrderId);
+                
+                if (order == null)
+                    throw new KeyNotFoundException($"Order with ID {checkoutDto.OrderId} not found.");
+
+                // Create or get Stripe customer
+                var customer = await GetOrCreateStripeCustomerAsync(order.User.Email, $"{order.ShippingFirstName} {order.ShippingLastName}");
+
+                // Create line items from order items
+                var lineItems = order.OrderItems.Select(item => new SessionLineItemOptions
+                {
+                    PriceData = new SessionLineItemPriceDataOptions
+                    {
+                        Currency = "usd",
+                        UnitAmount = _stripeService.ConvertToStripeAmountLong(item.UnitPrice),
+                        ProductData = new SessionLineItemPriceDataProductDataOptions
+                        {
+                            Name = item.ProductName,
+                            Metadata = new Dictionary<string, string>
+                            {
+                                ["product_id"] = item.ProductId.ToString(),
+                                ["variant_id"] = item.ProductVariantId?.ToString() ?? ""
+                            }
+                        }
+                    },
+                    Quantity = item.Quantity
+                }).ToList();
+
+                // Create metadata
+                var metadata = new Dictionary<string, string>
+                {
+                    ["order_id"] = checkoutDto.OrderId.ToString(),
+                    ["user_id"] = order.UserId,
+                    ["order_number"] = order.OrderNumber
+                };
+
+                var stripeSettings = _stripeSettings.Value;
+
+                var successUrl = stripeSettings.SuccessUrl;
+                var cancelUrl = stripeSettings.CancelUrl;
+
+                // Create Checkout Session
+                var session = await _stripeService.CreateCheckoutSessionAsync(
+                    customer.Id,
+                    lineItems,
+                    successUrl,
+                    cancelUrl,
+                    metadata
+                );
+
+                // Create local payment record
+                var payment = new Payment
+                {
+                    TransactionId = GenerateTransactionId(),
+                    Amount = order.TotalAmount,
+                    OrderId = checkoutDto.OrderId,
+                    PaymentMethodId = 1, // Default Stripe payment method ID
+                    Status = PaymentStatus.Pending,
+                    Gateway = "Stripe",
+                    GatewayTransactionId = session.Id,
+                    Notes = "Stripe Checkout Session created",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.PaymentRepository.AddAsync(payment);
+                await _unitOfWork.SaveChangesAsync();
+
+                return session;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating Stripe Checkout Session for order {OrderId}", checkoutDto.OrderId);
                 throw;
             }
         }
@@ -426,85 +508,6 @@ namespace eShop.Core.Services.Implementations
         private string GenerateTransactionId()
         {
             return $"TXN{DateTime.UtcNow:yyyyMMddHHmmss}{Random.Shared.Next(1000, 9999)}";
-        }
-
-        public async Task<Session> CreateCheckoutSessionAsync(CreateCheckoutSessionDto checkoutDto)
-        {
-            try
-            {
-                var order = await _unitOfWork.OrderRepository.GetByIdAsync(checkoutDto.OrderId, new[] { "User", "OrderItems" });
-                if (order == null)
-                    throw new KeyNotFoundException($"Order with ID {checkoutDto.OrderId} not found.");
-
-                // Create or get Stripe customer
-                var customer = await GetOrCreateStripeCustomerAsync(order.User.Email, $"{order.ShippingFirstName} {order.ShippingLastName}");
-
-                // Create line items from order items
-                var lineItems = order.OrderItems.Select(item => new SessionLineItemOptions
-                {
-                    PriceData = new SessionLineItemPriceDataOptions
-                    {
-                        Currency = "usd",
-                        UnitAmount = _stripeService.ConvertToStripeAmountLong(item.UnitPrice),
-                        ProductData = new SessionLineItemPriceDataProductDataOptions
-                        {
-                            Name = item.ProductName,
-                            Metadata = new Dictionary<string, string>
-                            {
-                                ["product_id"] = item.ProductId.ToString(),
-                                ["variant_id"] = item.ProductVariantId?.ToString() ?? ""
-                            }
-                        }
-                    },
-                    Quantity = item.Quantity
-                }).ToList();
-
-                // Create metadata
-                var metadata = new Dictionary<string, string>
-                {
-                    ["order_id"] = checkoutDto.OrderId.ToString(),
-                    ["user_id"] = order.UserId,
-                    ["order_number"] = order.OrderNumber
-                };
-
-                var stripeSettings = _stripeSettings.Value;
-
-                var successUrl = stripeSettings.SuccessUrl;
-                var cancelUrl = stripeSettings.CancelUrl;
-
-                // Create Checkout Session
-                var session = await _stripeService.CreateCheckoutSessionAsync(
-                    customer.Id,
-                    lineItems,
-                    successUrl,
-                    cancelUrl,
-                    metadata
-                );
-
-                // Create local payment record
-                var payment = new Payment
-                {
-                    TransactionId = GenerateTransactionId(),
-                    Amount = order.TotalAmount,
-                    OrderId = checkoutDto.OrderId,
-                    PaymentMethodId = 1, // Default Stripe payment method ID
-                    Status = PaymentStatus.Pending,
-                    Gateway = "Stripe",
-                    GatewayTransactionId = session.Id,
-                    Notes = "Stripe Checkout Session created",
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _unitOfWork.PaymentRepository.AddAsync(payment);
-                await _unitOfWork.SaveChangesAsync();
-
-                return session;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating Stripe Checkout Session for order {OrderId}", checkoutDto.OrderId);
-                throw;
-            }
         }
     }
 }

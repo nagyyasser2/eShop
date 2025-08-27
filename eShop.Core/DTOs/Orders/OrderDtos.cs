@@ -1,6 +1,11 @@
 ﻿using eShop.Core.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace eShop.Core.DTOs
+namespace eShop.Core.DTOs.Orders
 {
     public class OrderDto
     {
@@ -47,15 +52,14 @@ namespace eShop.Core.DTOs
         public string ShippingZipCode { get; set; }
         public string ShippingCountry { get; set; }
         public string? ShippingPhone { get; set; }
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
         public List<CreateOrderItemDto> OrderItems { get; set; } = new List<CreateOrderItemDto>();
         public List<CreatePaymentDto> Payments { get; set; } = new List<CreatePaymentDto>();
     }
 
     public class UpdateOrderDto
     {
-        public ShippingStatus? Status { get; set; }
-        public PaymentStatus? PaymentStatus { get; set; }
+        public string Id { get; set; }
         public decimal? SubTotal { get; set; }
         public decimal? TaxAmount { get; set; }
         public decimal? ShippingAmount { get; set; }

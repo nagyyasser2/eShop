@@ -1,8 +1,8 @@
-﻿using AutoMapper;
-using eShop.Core.DTOs;
-using eShop.Core.Models;
-using eShop.Core.Services.Abstractions;
+﻿using eShop.Core.Services.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using eShop.Core.Models;
+using eShop.Core.DTOs;
+using AutoMapper;
 
 namespace eShop.Api.Controllers
 {
@@ -10,14 +10,14 @@ namespace eShop.Api.Controllers
     [ApiController]
     public class BannersController : ControllerBase
     {
-        private readonly IUnitOfWork _unitOfWork;
         private readonly IFileService _fileService;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
         public BannersController(IUnitOfWork unitOfWork, IFileService fileService, IMapper mapper)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 

@@ -1,7 +1,8 @@
 ﻿using AutoMapper;
 using eShopApi.Core.Enums;
-using eShop.Core.DTOs;
+using eShop.Core.DTOs.Orders;
 using eShop.Core.Models;
+using eShop.Core.DTOs;
 
 namespace eShop.Core.Mapper
 {
@@ -29,10 +30,18 @@ namespace eShop.Core.Mapper
                 .ForMember(dest => dest.Payments, opt => opt.MapFrom(src => src.Payments))
                 .ReverseMap();
 
+            // Fixed: Don't ignore OrderId - it should be mapped from the DTO
             CreateMap<CreateOrderItemDto, OrderItem>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
-                .ForMember(dest => dest.OrderId, opt => opt.Ignore())
+                .ForMember(dest => dest.Order, opt => opt.Ignore())
+                .ForMember(dest => dest.Product, opt => opt.Ignore())
+                .ForMember(dest => dest.ProductVariant, opt => opt.Ignore())
                 .ReverseMap();
+
+            CreateMap<UpdateOrderItemDto, OrderItem>()
+                .ForMember(dest => dest.Order, opt => opt.Ignore())
+                .ForMember(dest => dest.Product, opt => opt.Ignore())
+                .ForMember(dest => dest.ProductVariant, opt => opt.Ignore());
 
             CreateMap<OrderItem, OrderItemDto>()
                 .ReverseMap();

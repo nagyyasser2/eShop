@@ -1,34 +1,45 @@
-﻿using AutoMapper;
-using eShop.Core.DTOs;
-using eShop.Core.Models;
-using eShop.Core.Services.Abstractions;
-using eShop.Core.Services.Implementations;
-using eShop.Core.Enums;
+﻿using eShop.Core.Services.Implementations;
 using Microsoft.AspNetCore.Authorization;
+using eShop.Core.Services.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using eShop.Core.DTOs.Orders;
 using System.Security.Claims;
+using eShop.Core.Enums;
+using eShop.Core.DTOs;
+using AutoMapper;
 
 namespace eShop.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class OrdersController(IOrderService orderService, IEmailSender emailSender, IMapper mapper) : ControllerBase
     {
         private readonly IOrderService _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
         private readonly IEmailSender _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
         private readonly IMapper _mapper = mapper ?? throw new ArgumentException(nameof(mapper));
-        
+
         [HttpGet]
-        public async Task<IActionResult> GetAllOrders([FromQuery] bool includeItems = false, [FromQuery] bool includePayments = false)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllOrders([FromQuery] int page, [FromQuery] int size = 10)
         {
-            var orders = await _orderService.GetAllOrdersAsync(includeItems, includePayments);
+            var orders = await _orderService.GetAllOrdersAsync(page, size);
             return Ok(orders);
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetOrderById(int id, [FromQuery] bool includeItems = false, [FromQuery] bool includePayments = false)
+        public async Task<IActionResult> GetOrderById(int id)
         {
-            var order = await _orderService.GetOrderByIdAsync(id, includeItems, includePayments);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin = User.IsInRole("Admin");
+
+            if(id.ToString() != userId && !isAdmin)
+            {
+                return Unauthorized();
+            }
+
+            var order = await _orderService.GetOrderByIdAsync(id);
+
             if (order == null)
                 return NotFound(new { Message = $"Order with ID {id} not found." });
 
@@ -36,180 +47,146 @@ namespace eShop.Api.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetOrdersByUser(string userId, [FromQuery] bool includeItems = false, [FromQuery] bool includePayments = false)
+        public async Task<IActionResult> GetOrdersByUser(string id)
         {
-            var orders = await _orderService.GetOrdersByUserIdAsync(userId, includeItems, includePayments);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId != id && !User.IsInRole("Admin"))
+            {
+                return Unauthorized();
+            }
+
+            var orders = await _orderService.GetUserOrdersAsync(userId);
             return Ok(orders);
         }
 
         [HttpPost]
-        [Authorize]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto order)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            try
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var isAdmin = User.IsInRole("Admin");
+
+            if (userId == null || userEmail == null)
             {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var userEmail = User.FindFirstValue(ClaimTypes.Email);
-
-                if (userId == null || userEmail == null)
-                {
-                    return BadRequest();
-                }
-
-                var createdOrder = await _orderService.CreateOrderAsync(order, userId);
-
-                var emailContent = OrderEmailTemplate.GenerateOrderConfirmationEmail(createdOrder);
-
-                await _emailSender.SendEmailAsync(userEmail, "Your eShop Order Confirmation", emailContent);
-
-                return CreatedAtAction(nameof(GetOrderById), new { id = createdOrder.Id }, createdOrder);
+                return BadRequest();
             }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "Failed to create order.", Error = ex.Message });
-            }
+
+            order.UserId = userId;
+
+            var createdOrder = await _orderService.CreateOrderAsync(order);
+
+            var emailContent = OrderEmailTemplate.GenerateOrderConfirmationEmail(createdOrder);
+
+            await _emailSender.SendEmailAsync(userEmail, "Your eShop Order Confirmation", emailContent);
+
+            return CreatedAtAction(nameof(GetOrderById), new { id = createdOrder.Id }, createdOrder);
         }
 
         [HttpPut("{id}/status")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateOrderStatus(
             int id,
-            [FromQuery] ShippingStatus status,
-            [FromQuery] DateTime? shippedAt = null,
-            [FromQuery] DateTime? deliveredAt = null)
+            [FromQuery] ShippingStatus shippingStatus,
+            [FromQuery] PaymentStatus paymentStatus)
         {
-            try
+            var currentOrder = await _orderService.GetOrderByIdAsync(id);
+
+            if (currentOrder == null)
             {
-                var currentOrder = await _orderService.GetOrderByIdAsync(id);
-                if (currentOrder == null)
-                {
-                    return NotFound(new { Message = "Order not found." });
-                }
-                
-                var originalStatus = currentOrder.ShippingStatus;
-
-                var updatedOrder = await _orderService.UpdateOrderStatusAsync(id, status);
-                var updatedOrderDto = _mapper.Map<OrderDto>(updatedOrder);
-
-                if (status == ShippingStatus.Shipped || status == ShippingStatus.Delivered)
-                {
-                    var additionalUpdateDto = new UpdateOrderDto
-                    {
-                        ShippedAt = status == ShippingStatus.Shipped ? shippedAt ?? DateTime.UtcNow : null,
-                        DeliveredAt = status == ShippingStatus.Delivered ? deliveredAt ?? DateTime.UtcNow : null
-                    };
-                }
-
-                if (originalStatus != updatedOrder.ShippingStatus)
-                {
-                    var userEmail = User.FindFirstValue(ClaimTypes.Email);
-                    if (!string.IsNullOrEmpty(userEmail))
-                    {
-                        var emailContent = OrderEmailTemplate.GenerateOrderStatusUpdateEmail(
-                            updatedOrderDto,
-                            originalStatus.ToString());
-
-                        var subject = status switch
-                        {
-                            ShippingStatus.Shipped => $"Your Order #{updatedOrderDto.OrderNumber} Has Shipped!",
-                            ShippingStatus.Delivered => $"Your Order #{updatedOrderDto.OrderNumber} Has Been Delivered!",
-                            _ => $"Order #{updatedOrderDto.OrderNumber} Status Update: {updatedOrderDto.ShippingStatus}"
-                        };
-
-                        await _emailSender.SendEmailAsync(userEmail, subject, emailContent);
-                    }
-                }
-
-                return Ok(updatedOrderDto);
+                return NotFound(new { Message = "Order not found!" });
             }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    Message = "Failed to update order status.",
-                    Error = ex.Message,
-                    Details = ex.InnerException?.Message
-                });
-            }
-        }
 
-        [HttpPatch("{id}/cancel")]
-        [Authorize]
-        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelOrderRequestDto? request = null)
-        {
-            try
+            var originalShippingStatus = currentOrder.ShippingStatus;
+            var originalPaymentStatus = currentOrder.PaymentStatus;
+
+            // Update the order
+            var updatedOrder = await _orderService.UpdateOrderStatusAsync(id, shippingStatus, paymentStatus);
+
+            var updatedOrderDto = _mapper.Map<OrderDto>(updatedOrder);
+
+            // Check if either status has changed
+            bool statusChanged = originalShippingStatus != updatedOrder.ShippingStatus ||
+                                 originalPaymentStatus != updatedOrder.PaymentStatus;
+
+            if (statusChanged)
             {
-                var currentOrder = await _orderService.GetOrderByIdAsync(id);
-                if (currentOrder == null)
-                {
-                    return NotFound(new { Message = "Order not found." });
-                }
-
-                // Optional: Check if the user owns this order (for user-level authorization)
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (currentOrder.UserId != userId && !User.IsInRole("Admin"))
-                {
-                    return Forbid("You can only cancel your own orders.");
-                }
-
-                var cancelledOrder = await _orderService.CancelOrderAsync(id, request?.Reason);
-
-                // Send cancellation email
                 var userEmail = User.FindFirstValue(ClaimTypes.Email);
                 if (!string.IsNullOrEmpty(userEmail))
                 {
-                    var emailContent = OrderEmailTemplate.GenerateOrderCancellationEmail(cancelledOrder, request?.Reason);
-                    var subject = $"Order #{cancelledOrder.OrderNumber} Cancellation Confirmation";
+                    // Generate email content with both statuses
+                    var emailContent = OrderEmailTemplate.GenerateOrderStatusUpdateEmail(
+                        updatedOrderDto,
+                        originalShippingStatus.ToString(),
+                        originalPaymentStatus.ToString());
+
+                    // Choose subject based on what changed
+                    string subject;
+                    if (originalShippingStatus != updatedOrder.ShippingStatus)
+                    {
+                        subject = updatedOrder.ShippingStatus switch
+                        {
+                            ShippingStatus.Shipped => $"🚚 Your Order #{updatedOrderDto.OrderNumber} Has Shipped!",
+                            ShippingStatus.Delivered => $"📦 Your Order #{updatedOrderDto.OrderNumber} Has Been Delivered!",
+                            _ => $"📝 Order #{updatedOrderDto.OrderNumber} Shipping Status Updated"
+                        };
+                    }
+                    else
+                    {
+                        // Payment status changed
+                        subject = $"💳 Payment Status Updated for Order #{updatedOrderDto.OrderNumber}";
+                    }
+
                     await _emailSender.SendEmailAsync(userEmail, subject, emailContent);
                 }
+            }
 
-                return Ok(new
-                {
-                    Message = "Order cancelled successfully.",
-                    Order = cancelledOrder
-                });
-            }
-            catch (KeyNotFoundException ex)
+            return Ok(updatedOrderDto);
+        }
+
+        [HttpPatch("{id}/cancel")]
+        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelOrderRequestDto? request = null)
+        {
+            var currentOrder = await _orderService.GetOrderByIdAsync(id);
+            if (currentOrder == null)
             {
-                return NotFound(new { Message = ex.Message });
+                return NotFound(new { Message = "Order not found." });
             }
-            catch (InvalidOperationException ex)
+
+            // Optional: Check if the user owns this order (for user-level authorization)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (currentOrder.UserId != userId && !User.IsInRole("Admin"))
             {
-                return BadRequest(new { Message = ex.Message });
+                return Forbid("You can only cancel your own orders.");
             }
-            catch (Exception ex)
+
+            var cancelledOrder = await _orderService.CancelOrderAsync(id, request?.Reason);
+
+            // Send cancellation email
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (!string.IsNullOrEmpty(userEmail))
             {
-                return StatusCode(500, new
-                {
-                    Message = "Failed to cancel order.",
-                    Error = ex.Message,
-                    Details = ex.InnerException?.Message
-                });
+                var emailContent = OrderEmailTemplate.GenerateOrderCancellationEmail(cancelledOrder, request?.Reason);
+                var subject = $"Order #{cancelledOrder.OrderNumber} Cancellation Confirmation";
+                await _emailSender.SendEmailAsync(userEmail, subject, emailContent);
             }
+
+            return Ok(new
+            {
+                Message = "Order cancelled successfully.",
+                Order = cancelledOrder
+            });
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateOrder(int id, [FromBody] Order order)
+        public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateOrderDto order)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if (id != order.Id)
+            if (id.ToString() != order.Id)
                 return BadRequest(new { Message = "Order ID mismatch." });
 
             var updatedOrder = await _orderService.UpdateOrderAsync(order);
@@ -217,6 +194,7 @@ namespace eShop.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles ="Admin")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
             var deleted = await _orderService.DeleteOrderAsync(id);

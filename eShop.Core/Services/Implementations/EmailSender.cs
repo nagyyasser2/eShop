@@ -45,42 +45,42 @@ namespace eShop.Core.Services.Implementations
         }
     }
 
-    public class EmailBackgroundService : BackgroundService
-    {
-        private readonly ConcurrentQueue<(string Email, string Subject, string Content)> _emailQueue = new();
-        private readonly IEmailSender _emailSender;
+    //public class EmailBackgroundService : BackgroundService
+    //{
+    //    private readonly ConcurrentQueue<(string Email, string Subject, string Content)> _emailQueue = new();
+    //    private readonly IEmailSender _emailSender;
 
-        public EmailBackgroundService(IEmailSender emailSender)
-        {
-            _emailSender = emailSender;
-        }
+    //    public EmailBackgroundService(IEmailSender emailSender)
+    //    {
+    //        _emailSender = emailSender;
+    //    }
 
-        public void EnqueueEmail(string email, string subject, string content)
-        {
-            _emailQueue.Enqueue((email, subject, content));
-        }
+    //    public void EnqueueEmail(string email, string subject, string content)
+    //    {
+    //        _emailQueue.Enqueue((email, subject, content));
+    //    }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                if (_emailQueue.TryDequeue(out var emailTask))
-                {
-                    try
-                    {
-                        await _emailSender.SendEmailAsync(emailTask.Email, emailTask.Subject, emailTask.Content);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the error (e.g., using ILogger)
-                        Console.WriteLine($"Failed to send email: {ex.Message}");
-                    }
-                }
-                else
-                {
-                    await Task.Delay(1000, stoppingToken); // Wait before checking the queue again
-                }
-            }
-        }
-    }
+    //    //protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    //    //{
+    //    //    while (!stoppingToken.IsCancellationRequested)
+    //    //    {
+    //    //        if (_emailQueue.TryDequeue(out var emailTask))
+    //    //        {
+    //    //            try
+    //    //            {
+    //    //                await _emailSender.SendEmailAsync(emailTask.Email, emailTask.Subject, emailTask.Content);
+    //    //            }
+    //    //            catch (Exception ex)
+    //    //            {
+    //    //                // Log the error (e.g., using ILogger)
+    //    //                Console.WriteLine($"Failed to send email: {ex.Message}");
+    //    //            }
+    //    //        }
+    //    //        else
+    //    //        {
+    //    //            await Task.Delay(1000, stoppingToken); // Wait before checking the queue again
+    //    //        }
+    //    //    }
+    //    //}
+    //}
 }

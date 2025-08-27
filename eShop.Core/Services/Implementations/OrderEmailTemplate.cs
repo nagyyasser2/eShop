@@ -1,4 +1,4 @@
-﻿using eShop.Core.DTOs;
+﻿using eShop.Core.DTOs.Orders;
 using eShop.Core.Enums;
 
 
@@ -156,128 +156,170 @@ namespace eShop.Core.Services.Implementations
                 </body>
                 </html>";
         }
-        public static string GenerateOrderStatusUpdateEmail(OrderDto order, string oldStatus)
+        public static string GenerateOrderStatusUpdateEmail(
+    OrderDto order,
+    string oldShippingStatus,
+    string oldPaymentStatus)
         {
-            // Enhanced status display names to match your enum
-            var statusDisplayNames = new Dictionary<string, string>
-        {
-            { ShippingStatus.Pending.ToString(), "is pending" },
-            { ShippingStatus.Processing.ToString(), "is being processed" },
-            { ShippingStatus.Shipped.ToString(), "has shipped" + (order.ShippedAt.HasValue ? $" on {order.ShippedAt:MMMM dd, yyyy}" : "") },
-            { ShippingStatus.Delivered.ToString(), "has been delivered" + (order.DeliveredAt.HasValue ? $" on {order.DeliveredAt:MMMM dd, yyyy}" : "") },
-            { ShippingStatus.Cancelled.ToString(), "has been cancelled" },
-            { ShippingStatus.Refunded.ToString(), "has been refunded" }
-        };
+            // Enhanced display names for shipping statuses
+            var shippingStatusDisplayNames = new Dictionary<string, string>
+    {
+        { ShippingStatus.Pending.ToString(), "is pending" },
+        { ShippingStatus.Processing.ToString(), "is being processed" },
+        { ShippingStatus.Shipped.ToString(), "has shipped" + (order.ShippedAt.HasValue ? $" on {order.ShippedAt:MMMM dd, yyyy}" : "") },
+        { ShippingStatus.Delivered.ToString(), "has been delivered" + (order.DeliveredAt.HasValue ? $" on {order.DeliveredAt:MMMM dd, yyyy}" : "") },
+        { ShippingStatus.Cancelled.ToString(), "has been cancelled" },
+        { ShippingStatus.Refunded.ToString(), "has been refunded" }
+    };
 
-            var statusText = statusDisplayNames.TryGetValue(order.ShippingStatus.ToString(), out var displayName)
-                ? displayName
+            // Payment status display names
+            var paymentStatusDisplayNames = new Dictionary<string, string>
+    {
+        { PaymentStatus.Pending.ToString(), "is pending" },
+        { PaymentStatus.Processing.ToString(), "is being processed" },
+        { PaymentStatus.Paid.ToString(), "has been paid" },
+        { PaymentStatus.Failed.ToString(), "payment failed" },
+        { PaymentStatus.Refunded.ToString(), "has been refunded" },
+        { PaymentStatus.Cancelled.ToString(), "has been cancelled" }
+    };
+
+            var shippingStatusText = shippingStatusDisplayNames.TryGetValue(order.ShippingStatus.ToString(), out var shipDisplay)
+                ? shipDisplay
                 : order.ShippingStatus.ToString();
 
+            var paymentStatusText = paymentStatusDisplayNames.TryGetValue(order.PaymentStatus.ToString(), out var payDisplay)
+                ? payDisplay
+                : order.PaymentStatus.ToString();
+
+            // Determine main greeting based on what changed
+            string mainStatusText;
+            if (oldShippingStatus != order.ShippingStatus.ToString() && oldPaymentStatus != order.PaymentStatus.ToString())
+            {
+                mainStatusText = $"shipping {shippingStatusText} and payment {paymentStatusText}";
+            }
+            else if (oldShippingStatus != order.ShippingStatus.ToString())
+            {
+                mainStatusText = $"your order {shippingStatusText}";
+            }
+            else
+            {
+                mainStatusText = $"payment for your order {paymentStatusText}";
+            }
+
             return $@"
-        <!DOCTYPE html>
-        <html lang='en'>
-        <head>
-            <meta charset='UTF-8'>
-            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-            <title>Order Status Update</title>
-        </head>
-        <body style='margin: 0; padding: 10px; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); min-height: 100vh;'>
-            <div style='max-width: 600px; margin: 40px auto; background: #ffffff;  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);'>
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Order Status Update</title>
+</head>
+<body style='margin: 0; padding: 10px; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); min-height: 100vh;'>
+    <div style='max-width: 600px; margin: 40px auto; background: #ffffff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);'>
     
-                <!-- Header -->
-                <div style='padding: 24px; text-align: center;'>
-                    <h1 style='margin: 0; font-size: 28px; font-weight: 700; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent;'>
-                        ShopHub
-                    </h1>
-                    <p style='margin: 8px 0 0 0; color: #64748b; font-size: 14px;'>Your Modern Shopping Experience</p>
+        <!-- Header -->
+        <div style='padding: 24px; text-align: center;'>
+            <h1 style='margin: 0; font-size: 28px; font-weight: 700; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent;'>
+                ShopHub
+            </h1>
+            <p style='margin: 8px 0 0 0; color: #64748b; font-size: 14px;'>Your Modern Shopping Experience</p>
+        </div>
+
+        <!-- Main Content -->
+        <div style='padding: 24px;'>
+
+            <!-- Status Update Header -->
+            <div style='text-align: center; margin-bottom: 32px;'>
+                <div style='display: inline-block; padding: 10px 20px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 20px;'>
+                    <span style='color: white; font-weight: 600; font-size: 16px;'>Order Updated</span>
                 </div>
+                <h2 style='margin: 12px 0 8px 0; font-size: 24px; font-weight: 700; color: #1f2937;'>
+                    Order #{order.OrderNumber}
+                </h2>
+                <p style='margin: 0; color: #6b7280; font-size: 14px;'>
+                    Status update: shipping '{oldShippingStatus}' → '{order.ShippingStatus}', payment '{oldPaymentStatus}' → '{order.PaymentStatus}'
+                </p>
+            </div>
 
-                <!-- Main Content -->
-                <div style='padding: 24px;'>
-        
-                    <!-- Status Update Header -->
-                    <div style='text-align: center; margin-bottom: 32px;'>
-                        <div style='display: inline-block; padding: 10px 20px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 20px;'>
-                            <span style='color: white; font-weight: 600; font-size: 16px;'>Order Updated</span>
-                        </div>
-                        <h2 style='margin: 12px 0 8px 0; font-size: 24px; font-weight: 700; color: #1f2937;'>
-                            Order #{order.OrderNumber}
-                        </h2>
-                        <p style='margin: 0; color: #6b7280; font-size: 14px;'>
-                            Status changed from {oldStatus} to {order.ShippingStatus}
-                        </p>
+            <!-- Greeting -->
+            <div style='margin-bottom: 24px; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb;'>
+                <h3 style='margin: 0 0 10px 0; font-size: 18px; background: linear-gradient(90deg, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700;'>
+                    Dear {order.ShippingFirstName} {order.ShippingLastName},
+                </h3>
+                <p style='margin: 0; color: #4b5563; line-height: 1.5; font-size: 14px;'>
+                    {mainStatusText}. Here's the latest update:
+                </p>
+            </div>
+
+            <!-- Status Details -->
+            <div style='margin-bottom: 24px;'>
+                <div style='background: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e7eb;'>
+                    <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
+                        <span style='color: #6b7280;'>Order Number:</span>
+                        <span style='color: #374151; font-weight: 600;'>#{order.OrderNumber}</span>
                     </div>
 
-                    <!-- Greeting -->
-                    <div style='margin-bottom: 24px; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb;'>
-                        <h3 style='margin: 0 0 10px 0; font-size: 18px; background: linear-gradient(90deg, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700;'>
-                            Dear {order.ShippingFirstName} {order.ShippingLastName},
-                        </h3>
-                        <p style='margin: 0; color: #4b5563; line-height: 1.5; font-size: 14px;'>
-                            Your order {statusText}. Here's the latest update:
-                        </p>
-                    </div>
-
-                    <!-- Status Details -->
-                    <div style='margin-bottom: 24px;'>
-                        <div style='background: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e7eb;'>
-                            <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
-                                <span style='color: #6b7280;'>Order Number:</span>
-                                <span style='color: #374151; font-weight: 600;'>#{order.OrderNumber}</span>
-                            </div>
-                            <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
-                                <span style='color: #6b7280;'>Previous Status:</span>
-                                <span style='color: #374151; font-weight: 600;'>{oldStatus}</span>
-                            </div>
-                            <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
-                                <span style='color: #6b7280;'>New Status:</span>
-                                <span style='color: #3b82f6; font-weight: 700; text-transform: uppercase;'>{order.ShippingStatus}</span>
-                            </div>
-                            <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
-                                <span style='color: #6b7280;'>Date Updated:</span>
-                                <span style='color: #374151; font-weight: 600;'>{DateTime.Now:MMMM dd, yyyy 'at' HH:mm}</span>
-                            </div>
+                    <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
+                        <span style='color: #6b7280;'>Shipping Status:</span>
+                        <div style='text-align: right;'>
+                            <div style='color: #9ca3af; font-size: 12px;'>{oldShippingStatus}</div>
+                            <div style='color: #3b82f6; font-weight: 700; font-size: 14px;'>→ {order.ShippingStatus}</div>
                         </div>
                     </div>
 
-                    <!-- Action Button (if shipped) -->
-                    {(order.ShippingStatus.ToString() == "Shipped" ? $@"
-                    <div style='margin-bottom: 24px; text-align: center;'>
-                        <a href='#' style='display: inline-block; padding: 12px 24px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: white; text-decoration: none; font-weight: 600; border-radius: 6px;'>
-                            Track Your Package
-                        </a>
-                    </div>" : "")}
-
-                    <!-- Footer Message -->
-                    <div style='text-align: center; padding: 24px; background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb;'>
-                        <h3 style='margin: 0 0 12px 0; font-size: 20px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700;'>
-                            Need Help?
-                        </h3>
-                        <p style='margin: 0 0 12px 0; color: #4b5563; line-height: 1.5; font-size: 14px;'>
-                            If you have any questions about your order, please contact our support team.
-                        </p>
-                        <div style='display: inline-block; padding: 10px 20px; background: linear-gradient(90deg, #8b5cf6, #ec4899); border-radius: 20px;'>
-                            <span style='color: white; font-weight: 600; font-size: 14px;'>Contact Support</span>
+                    <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
+                        <span style='color: #6b7280;'>Payment Status:</span>
+                        <div style='text-align: right;'>
+                            <div style='color: #9ca3af; font-size: 12px;'>{oldPaymentStatus}</div>
+                            <div style='color: #10b981; font-weight: 700; font-size: 14px;'>→ {order.PaymentStatus}</div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Footer -->
-                <div style='padding: 24px; text-align: center; background: #f8fafc; border-top: 1px solid #e5e7eb;'>
-                    <p style='margin: 0 0 12px 0; color: #6b7280; font-size: 12px;'>
-                        © {DateTime.Now.Year} ShopHub. All rights reserved.
-                    </p>
-                    <div style='margin-bottom: 12px;'>
-                        <span style='color: #6b7280; font-size: 12px; margin-right: 12px;'>📧 support@eshop.com</span>
-                        <span style='color: #6b7280; font-size: 12px;'>📞 (+20) 1090312546</span>
+                    <div style='display: flex; justify-content: space-between; margin-bottom: 16px;'>
+                        <span style='color: #6b7280;'>Updated At:</span>
+                        <span style='color: #374151; font-weight: 600;'>{DateTime.Now:MMMM dd, yyyy 'at' HH:mm}</span>
                     </div>
-                    <p style='margin: 0; color: #9ca3af; font-size: 12px;'>
-                        123 E-Shop St, Commerce City, EG
-                    </p>
                 </div>
             </div>
-        </body>
-        </html>";
+
+            <!-- Action Button (if shipped) -->
+            {(order.ShippingStatus.ToString() == "Shipped" ? $@"
+            <div style='margin-bottom: 24px; text-align: center;'>
+                <a href='https://yourshop.com/track/{order.OrderNumber}' style='display: inline-block; padding: 12px 24px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: white; text-decoration: none; font-weight: 600; border-radius: 6px;'>
+                    Track Your Package
+                </a>
+            </div>" : "")}
+
+            <!-- Footer Message -->
+            <div style='text-align: center; padding: 24px; background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb;'>
+                <h3 style='margin: 0 0 12px 0; font-size: 20px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700;'>
+                    Need Help?
+                </h3>
+                <p style='margin: 0 0 12px 0; color: #4b5563; line-height: 1.5; font-size: 14px;'>
+                    If you have any questions about your order, please contact our support team.
+                </p>
+                <div style='display: inline-block; padding: 10px 20px; background: linear-gradient(90deg, #8b5cf6, #ec4899); border-radius: 20px;'>
+                    <span style='color: white; font-weight: 600; font-size: 14px;'>Contact Support</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style='padding: 24px; text-align: center; background: #f8fafc; border-top: 1px solid #e5e7eb;'>
+            <p style='margin: 0 0 12px 0; color: #6b7280; font-size: 12px;'>
+                © {DateTime.Now.Year} ShopHub. All rights reserved.
+            </p>
+            <div style='margin-bottom: 12px;'>
+                <span style='color: #6b7280; font-size: 12px; margin-right: 12px;'>📧 support@shopub.com</span>
+                <span style='color: #6b7280; font-size: 12px;'>📞 (+20) 1090312546</span>
+            </div>
+            <p style='margin: 0; color: #9ca3af; font-size: 12px;'>
+                123 E-Shop St, Commerce City, EG
+            </p>
+        </div>
+    </div>
+</body>
+</html>";
         }
         public static string GenerateOrderCancellationEmail(OrderDto order, string? cancellationReason = null)
         {

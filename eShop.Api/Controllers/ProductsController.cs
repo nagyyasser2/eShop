@@ -1,9 +1,9 @@
-﻿using AutoMapper;
-using eShop.Core.DTOs;
-using eShop.Core.Models;
-using eShop.Core.Services.Abstractions;
+﻿using eShop.Core.Services.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq.Expressions;
+using eShop.Core.Models;
+using eShop.Core.DTOs;
+using AutoMapper;
 
 namespace eShop.Api.Controllers
 {
@@ -11,19 +11,19 @@ namespace eShop.Api.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly IUnitOfWork unitOfWork;
-        private readonly IMapper mapper;
-        private readonly IFileService fileService;
         private readonly IProductService productService;
         private readonly IVariantService variantService;
+        private readonly IFileService fileService;
+        private readonly IUnitOfWork unitOfWork;
+        private readonly IMapper mapper;
 
         public ProductsController(IUnitOfWork unitOfWork, IMapper mapper, IFileService fileService, IProductService productService, IVariantService variantService)
         {
-            this.unitOfWork = unitOfWork;
-            this.mapper = mapper;
-            this.fileService = fileService;
             this.productService = productService;
             this.variantService = variantService;
+            this.fileService = fileService;
+            this.unitOfWork = unitOfWork;
+            this.mapper = mapper;
         }
 
         [HttpPost]

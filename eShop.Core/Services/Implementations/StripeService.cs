@@ -1,33 +1,30 @@
-﻿using Stripe;
-using eShop.Core.Services.Abstractions;
-using Microsoft.Extensions.Configuration;
+﻿using eShop.Core.Services.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using eShop.Core.Configurations;
 using Stripe.Checkout;
+using Stripe;
 
 namespace eShop.Core.Services.Implementations
 {
     public class StripeService : IStripeService
     {
         private readonly PaymentIntentService _paymentIntentService;
-        private readonly CustomerService _customerService;
         private readonly PaymentMethodService _paymentMethodService;
-        private readonly RefundService _refundService;
+        private readonly IOptions<StripeSettings> _stripeSettings;
+        private readonly CustomerService _customerService;
         private readonly SessionService _sessionService;
         private readonly ILogger<StripeService> _logger;
-        private readonly string _webhookSecret;
+        private readonly RefundService _refundService;
 
-        public StripeService(IConfiguration configuration, ILogger<StripeService> logger)
+        public StripeService(ILogger<StripeService> logger, IOptions<StripeSettings> stripeSettings)
         {
-            var secretKey = configuration["Stripe:SecretKey"];
-            _webhookSecret = configuration["Stripe:WebhookSecret"];
-
-            StripeConfiguration.ApiKey = secretKey;
-
             _paymentIntentService = new PaymentIntentService();
-            _customerService = new CustomerService();
             _paymentMethodService = new PaymentMethodService();
-            _refundService = new RefundService();
+            _customerService = new CustomerService();
             _sessionService = new SessionService();
+            _refundService = new RefundService();
+            _stripeSettings = stripeSettings;
             _logger = logger;
         }
 
@@ -55,6 +52,34 @@ namespace eShop.Core.Services.Implementations
             {
                 _logger.LogError(ex, "Error creating PaymentIntent for amount {Amount}", amount);
                 throw new InvalidOperationException($"Failed to create payment intent: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<Session> CreateCheckoutSessionAsync(string customerId, List<SessionLineItemOptions> lineItems, string successUrl, string cancelUrl, Dictionary<string, string>? metadata = null)
+        {
+            try
+            {
+                var options = new SessionCreateOptions
+                {
+                    Customer = customerId,
+                    PaymentMethodTypes = new List<string> { "card" },
+                    LineItems = lineItems,
+                    Mode = "payment",
+                    SuccessUrl = successUrl,
+                    CancelUrl = cancelUrl,
+                    Metadata = metadata,
+                    AutomaticTax = new SessionAutomaticTaxOptions
+                    {
+                        Enabled = false
+                    }
+                };
+
+                return await _sessionService.CreateAsync(options);
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex, "Error creating Checkout Session for customer {CustomerId}", customerId);
+                throw new InvalidOperationException($"Failed to create checkout session: {ex.Message}", ex);
             }
         }
 
@@ -291,7 +316,6 @@ namespace eShop.Core.Services.Implementations
 
         public long ConvertToStripeAmountLong(decimal amount, string currency = "usd")
         {
-            // Most currencies use cents (multiply by 100), but some don't have fractional units
             var zeroDecimalCurrencies = new[] { "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf" };
 
             if (zeroDecimalCurrencies.Contains(currency.ToLower()))
@@ -300,34 +324,6 @@ namespace eShop.Core.Services.Implementations
             }
 
             return (long)(amount * 100);
-        }
-
-        public async Task<Session> CreateCheckoutSessionAsync(string customerId, List<SessionLineItemOptions> lineItems, string successUrl, string cancelUrl, Dictionary<string, string>? metadata = null)
-        {
-            try
-            {
-                var options = new SessionCreateOptions
-                {
-                    Customer = customerId,
-                    PaymentMethodTypes = new List<string> { "card" },
-                    LineItems = lineItems,
-                    Mode = "payment",
-                    SuccessUrl = successUrl,
-                    CancelUrl = cancelUrl,
-                    Metadata = metadata,
-                    AutomaticTax = new SessionAutomaticTaxOptions
-                    {
-                        Enabled = false
-                    }
-                };
-
-                return await _sessionService.CreateAsync(options);
-            }
-            catch (StripeException ex)
-            {
-                _logger.LogError(ex, "Error creating Checkout Session for customer {CustomerId}", customerId);
-                throw new InvalidOperationException($"Failed to create checkout session: {ex.Message}", ex);
-            }
         }
     }
 }

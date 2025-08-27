@@ -1,24 +1,18 @@
-﻿using eShop.Core.DTOs;
-using eShop.Core.DTOs.Payments;
+﻿using Microsoft.AspNetCore.Authorization;
 using eShop.Core.Services.Abstractions;
-using Microsoft.AspNetCore.Authorization;
+using eShop.Core.DTOs.Payments;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using eShop.Core.DTOs;
 
 namespace eShop.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PaymentsController : ControllerBase
+    public class PaymentsController(IPaymentService paymentService, ILogger<PaymentsController> logger) : ControllerBase
     {
-        private readonly IPaymentService _paymentService;
-        private readonly ILogger<PaymentsController> _logger;
-
-        public PaymentsController(IPaymentService paymentService, ILogger<PaymentsController> logger)
-        {
-            _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly ILogger<PaymentsController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        private readonly IPaymentService _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
 
         [HttpGet("{id}")]
         [Authorize]
@@ -151,6 +145,7 @@ namespace eShop.Api.Controllers
                 return StatusCode(500, new { Message = "Failed to create checkout session.", Error = ex.Message });
             }
         }
+        
         [HttpPost("confirm")]
         [Authorize]
         public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPaymentDto confirmDto)

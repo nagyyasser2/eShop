@@ -1,17 +1,18 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
-using eShop.Core.Services.Abstractions;
-using eShop.Core.Services.Implementations;
 using Microsoft.AspNetCore.Authentication;
+using eShop.Core.Services.Implementations;
+using eShop.Core.Services.Abstractions;
+using System.Text.Json.Serialization;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using eShop.Core.Configurations;
 using eShop.Core.Models;
+using eShop.Core.Mapper;
 using System.Text;
 using eShop.EF;
-using System.Text.Json.Serialization;
-using eShop.Core.Mapper;
-using eShop.Core.Configurations;
 using Stripe;
+using eShop.Api.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,7 +49,7 @@ builder.Services.AddScoped<IVariantService, VariantService>();
 builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
-builder.Services.AddHostedService<EmailBackgroundService>();
+//builder.Services.AddHostedService<EmailBackgroundService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddAutoMapper(typeof(BannerProfile));
 builder.Services.AddAutoMapper(typeof(VariantProfileMapping));
@@ -143,7 +144,7 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = string.Empty;
     });
 }
-
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseStaticFiles();

@@ -1,10 +1,10 @@
-﻿using eShop.Core.Models;
-using eShop.Core.DTOs;
+﻿using Microsoft.AspNetCore.Authorization;
 using eShop.Core.Services.Abstractions;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using eShop.Core.Config;
+using eShop.Core.Models;
+using eShop.Core.DTOs;
 
 namespace eShop.Api.Controllers
 {
@@ -12,26 +12,27 @@ namespace eShop.Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly IJwtTokenService _jwtTokenService;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IGoogleAuthService _googleAuthService;
+        private readonly IJwtTokenService _jwtTokenService;
+        private readonly IConfiguration _configuration;
 
         public AuthController(
-            IConfiguration configuration,
-            UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            IJwtTokenService jwtTokenService,
+            UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            IGoogleAuthService googleAuthService)
+            IGoogleAuthService googleAuthService,
+            IJwtTokenService jwtTokenService,
+            IConfiguration configuration
+            )
         {
+            _googleAuthService = googleAuthService;
+            _jwtTokenService = jwtTokenService;
+            _signInManager = signInManager;
             _configuration = configuration;
             _userManager = userManager;
-            _signInManager = signInManager;
-            _jwtTokenService = jwtTokenService;
-            _googleAuthService = googleAuthService;
             _roleManager = roleManager;
         }
 

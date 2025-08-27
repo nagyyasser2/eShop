@@ -7,6 +7,7 @@ namespace eShop.Core.Enums
         Pending,
         Paid,
         Failed,
+        Processing,
         CashOnDelivery,
         Refunded,
         Cancelled,

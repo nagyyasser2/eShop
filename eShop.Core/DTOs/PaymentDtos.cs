@@ -1,4 +1,5 @@
-﻿using eShop.Core.Enums;
+﻿using eShop.Core.DTOs.Orders;
+using eShop.Core.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace eShop.Core.DTOs
