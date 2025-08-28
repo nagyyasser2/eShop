@@ -7,12 +7,12 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using eShop.Core.Configurations;
+using eShop.Api.Middlewares;
 using eShop.Core.Models;
 using eShop.Core.Mapper;
 using System.Text;
 using eShop.EF;
 using Stripe;
-using eShop.Api.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,7 +49,6 @@ builder.Services.AddScoped<IVariantService, VariantService>();
 builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
-//builder.Services.AddHostedService<EmailBackgroundService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddAutoMapper(typeof(BannerProfile));
 builder.Services.AddAutoMapper(typeof(VariantProfileMapping));

@@ -3,11 +3,12 @@
 namespace eShop.Core.DTOs
 {
     using System.ComponentModel.DataAnnotations;
+    using System.Text.Json.Serialization;
 
     public class RegisterRequest
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; }
 
         [Required]
@@ -56,15 +57,12 @@ namespace eShop.Core.DTOs
 
     public class UpdateProfileRequest
     {
-        [Required]
         [StringLength(50)]
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
 
-        [Required]
         [StringLength(50)]
-        public string LastName { get; set; }
-
-        [Required]
+        public string? LastName { get; set; }
+        
         public DateTime DateOfBirth { get; set; }
     }
 

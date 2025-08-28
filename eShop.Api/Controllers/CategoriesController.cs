@@ -22,7 +22,6 @@ namespace eShop.Api.Controllers
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
-        // GET: api/Categories
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories(
             [FromQuery] bool includeSubCategories = false,
@@ -53,7 +52,6 @@ namespace eShop.Api.Controllers
             }
         }
 
-        // GET: api/Categories/5
         [HttpGet("{id}")]
         public async Task<ActionResult<CategoryDto>> GetCategory(int id, [FromQuery] bool includeSubCategories = false)
         {
@@ -72,7 +70,6 @@ namespace eShop.Api.Controllers
             return Ok(categoryDto);
         }
 
-        // GET: api/Categories/summary
         [HttpGet("summary")]
         public async Task<ActionResult<IEnumerable<CategorySummaryDto>>> GetCategoriesSummary()
         {
@@ -82,7 +79,6 @@ namespace eShop.Api.Controllers
             return Ok(categorySummaryDtos);
         }
 
-        // GET: api/Categories/tree
         [HttpGet("tree")]
         public async Task<ActionResult<IEnumerable<CategoryTreeDto>>> GetCategoriesTree()
         {
@@ -91,7 +87,6 @@ namespace eShop.Api.Controllers
             return Ok(rootCategories);
         }
 
-        // GET: api/Categories/active
         [HttpGet("active")]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetActiveCategories(
             [FromQuery] bool includeSubCategories = false)
@@ -105,7 +100,6 @@ namespace eShop.Api.Controllers
             return Ok(categoryDtos);
         }
 
-        // POST: api/Categories
         [HttpPost]
         [Authorize(Policy = "RequireAdminRole")]
         [Consumes("multipart/form-data")]
@@ -154,7 +148,6 @@ namespace eShop.Api.Controllers
             return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, createdCategoryDto);
         }
 
-        // PUT: api/Categories/5
         [HttpPut("{id}")]
         [Authorize(Policy = "RequireAdminRole")]
         [Consumes("multipart/form-data")]
@@ -222,7 +215,6 @@ namespace eShop.Api.Controllers
             return NoContent();
         }
 
-        // DELETE: api/Categories/5
         [HttpDelete("{id}")]
         [Authorize(Policy = "RequireAdminRole")]
         public async Task<IActionResult> DeleteCategory(int id)
@@ -259,8 +251,6 @@ namespace eShop.Api.Controllers
             return Ok(new { id = category.Id, parentCategoryId }); // ✅ return this
         }
 
-
-        // PUT: api/Categories/5/toggle-status
         [HttpPut("{id}/toggle-status")]
         [Authorize(Policy = "RequireAdminRole")]
         public async Task<IActionResult> ToggleCategoryStatus(int id)
@@ -278,7 +268,6 @@ namespace eShop.Api.Controllers
             return NoContent();
         }
 
-        // GET: api/Categories/5/children
         [HttpGet("{id}/children")]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategoryChildren(int id)
         {

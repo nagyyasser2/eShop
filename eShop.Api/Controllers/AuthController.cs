@@ -2,40 +2,23 @@
 using eShop.Core.Services.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using eShop.Core.Config;
 using eShop.Core.Models;
 using eShop.Core.DTOs;
+using eShop.Core.Templates;
 
 namespace eShop.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController(
+        SignInManager<ApplicationUser> signInManager,
+        UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager,
+        IGoogleAuthService googleAuthService,
+        IJwtTokenService jwtTokenService,
+        IEmailSender emailSender
+            ) : ControllerBase
     {
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly IGoogleAuthService _googleAuthService;
-        private readonly IJwtTokenService _jwtTokenService;
-        private readonly IConfiguration _configuration;
-
-        public AuthController(
-            SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole> roleManager,
-            IGoogleAuthService googleAuthService,
-            IJwtTokenService jwtTokenService,
-            IConfiguration configuration
-            )
-        {
-            _googleAuthService = googleAuthService;
-            _jwtTokenService = jwtTokenService;
-            _signInManager = signInManager;
-            _configuration = configuration;
-            _userManager = userManager;
-            _roleManager = roleManager;
-        }
-
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
@@ -49,7 +32,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+            var existingUser = await userManager.FindByEmailAsync(request.Email);
 
             if (existingUser != null)
             {
@@ -69,30 +52,29 @@ namespace eShop.Api.Controllers
                 DateOfBirth = request.DateOfBirth
             };
 
-            var result = await _userManager.CreateAsync(user, request.Password);
+            var result = await userManager.CreateAsync(user, request.Password);
 
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, "User");
+                await userManager.AddToRoleAsync(user, "User");
 
-                var token = await _jwtTokenService.GenerateTokenAsync(user);
+                // Generate email confirmation token
+                var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
+                var confirmationLink = Url.Action("ConfirmEmail", "Auth",
+                    new { userId = user.Id, token = emailToken },
+                    Request.Scheme);
 
-                return Ok(new ApiResponse<AuthResponse>
+                // Send confirmation email
+                var emailContent = EmailTemplate.GetEmailConfirmationTemplate(
+                    user.FirstName,
+                    confirmationLink);
+
+                await emailSender.SendEmailAsync(user.Email, "Confirm Your Email", emailContent);
+
+                return Ok(new ApiResponse<object>
                 {
                     Success = true,
-                    Message = "User registered successfully",
-                    Data = new AuthResponse
-                    {
-                        Token = token,
-                        User = new UserResponse
-                        {
-                            Id = user.Id,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            DateOfBirth = user.DateOfBirth
-                        }
-                    }
+                    Message = "User registered successfully. Please check your email to confirm your account."
                 });
             }
 
@@ -103,448 +85,7 @@ namespace eShop.Api.Controllers
                 Errors = result.Errors.Select(e => e.Description).ToList()
             });
         }
-
-        [HttpGet("google-auth-url")]
-        public IActionResult GetGoogleAuthUrl([FromQuery] GoogleAuthUrlRequest request)
-        {
-            var clientId = HttpContext.RequestServices.GetService<IConfiguration>()["Authentication:Google:ClientId"];
-            var scopes = "openid profile email";
-            var responseType = "code";
-            var state = request.State ?? Guid.NewGuid().ToString();
-            
-
-            var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
-                         $"client_id={Uri.EscapeDataString(clientId)}&" +
-                         $"redirect_uri={Uri.EscapeDataString(request.RedirectUri)}&" +
-                         $"response_type={responseType}&" +
-                         $"scope={Uri.EscapeDataString(scopes)}&" +
-                         $"state={Uri.EscapeDataString(state)}";
-
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                Message = "Google auth URL generated successfully",
-                Data = new { AuthUrl = authUrl, State = state }
-            });
-        }
-
-        [HttpGet("callback")]
-        public async Task<IActionResult> GoogleCallback([FromQuery] string code, [FromQuery] string state)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(code))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Missing authorization code or redirect URI"
-                    });
-                }
-
-                var googleSettings = _configuration.GetSection("Authentication:Google").Get<GoogleAuthSettings>();
-
-                if (googleSettings == null || string.IsNullOrEmpty(googleSettings.RedirectUri))
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Google authentication settings are not configured properly."
-                    });
-                }
-
-                var tokenResponse = await _googleAuthService.ExchangeCodeForTokenAsync(code, googleSettings.RedirectUri);
-
-                if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Failed to exchange authorization code for access token"
-                    });
-                }
-
-                var googleUser = await _googleAuthService.GetUserInfoAsync(tokenResponse.AccessToken);
-
-                if (googleUser == null || string.IsNullOrEmpty(googleUser.Email))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Failed to get user information from Google"
-                    });
-                }
-
-                var user = await _userManager.FindByEmailAsync(googleUser.Email);
-
-                if (user == null)
-                {
-                    // Create new user
-                    user = new ApplicationUser
-                    {
-                        UserName = googleUser.Email,
-                        Email = googleUser.Email,
-                        FirstName = googleUser.GivenName ?? "",
-                        LastName = googleUser.FamilyName ?? "",
-                        GoogleId = googleUser.Id,
-                        IsGoogleUser = true,
-                        ProfilePictureUrl = googleUser.Picture,
-                        EmailConfirmed = googleUser.VerifiedEmail
-                    };
-
-                    var result = await _userManager.CreateAsync(user);
-                    if (!result.Succeeded)
-                    {
-                        return BadRequest(new ApiResponse<object>
-                        {
-                            Success = false,
-                            Message = "Failed to create user account",
-                            Errors = result.Errors.Select(e => e.Description).ToList()
-                        });
-                    }
-
-                    // Add user to default role
-                    await _userManager.AddToRoleAsync(user, "User");
-                }
-                else
-                {
-                    // Update existing user with Google info if not already a Google user
-                    if (!user.IsGoogleUser)
-                    {
-                        user.GoogleId = googleUser.Id;
-                        user.IsGoogleUser = true;
-                        user.ProfilePictureUrl = googleUser.Picture;
-                        await _userManager.UpdateAsync(user);
-                    }
-                }
-
-                var token = await _jwtTokenService.GenerateTokenAsync(user);
-                var roles = await _userManager.GetRolesAsync(user);
-
-                return Ok(new ApiResponse<AuthResponse>
-                {
-                    Success = true,
-                    Message = "Google authentication successful",
-                    Data = new AuthResponse
-                    {
-                        Token = token,
-                        User = new UserResponse
-                        {
-                            Id = user.Id,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            DateOfBirth = user.DateOfBirth,
-                            ProfilePictureUrl = user.ProfilePictureUrl,
-                            Roles = roles.ToList()
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Google authentication failed",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
         
-        [HttpPost("google-login")]
-        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
-        {
-            try
-            {
-                var googleUser = await _googleAuthService.GetUserInfoAsync(request.AccessToken);
-
-                if (googleUser == null || string.IsNullOrEmpty(googleUser.Email))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Invalid Google access token"
-                    });
-                }
-
-                var user = await _userManager.FindByEmailAsync(googleUser.Email);
-
-                if (user == null)
-                {
-                    // Create new user
-                    user = new ApplicationUser
-                    {
-                        UserName = googleUser.Email,
-                        Email = googleUser.Email,
-                        FirstName = googleUser.GivenName ?? "",
-                        LastName = googleUser.FamilyName ?? "",
-                        GoogleId = googleUser.Id,
-                        IsGoogleUser = true,
-                        ProfilePictureUrl = googleUser.Picture,
-                        EmailConfirmed = googleUser.VerifiedEmail
-                    };
-
-                    var result = await _userManager.CreateAsync(user);
-                    if (!result.Succeeded)
-                    {
-                        return BadRequest(new ApiResponse<object>
-                        {
-                            Success = false,
-                            Message = "Failed to create user account",
-                            Errors = result.Errors.Select(e => e.Description).ToList()
-                        });
-                    }
-
-                    // Add user to default role
-                    await _userManager.AddToRoleAsync(user, "User");
-                }
-                else
-                {
-                    // Update existing user with Google info if not already a Google user
-                    if (!user.IsGoogleUser)
-                    {
-                        user.GoogleId = googleUser.Id;
-                        user.IsGoogleUser = true;
-                        user.ProfilePictureUrl = googleUser.Picture;
-                        await _userManager.UpdateAsync(user);
-                    }
-                }
-
-                var token = await _jwtTokenService.GenerateTokenAsync(user);
-                var roles = await _userManager.GetRolesAsync(user);
-
-                return Ok(new ApiResponse<AuthResponse>
-                {
-                    Success = true,
-                    Message = "Google login successful",
-                    Data = new AuthResponse
-                    {
-                        Token = token,
-                        User = new UserResponse
-                        {
-                            Id = user.Id,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            DateOfBirth = user.DateOfBirth,
-                            ProfilePictureUrl = user.ProfilePictureUrl,
-                            Roles = roles.ToList()
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Google authentication failed",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
-
-        [HttpPost("google-code")]
-        public async Task<IActionResult> GoogleCodeLogin([FromBody] GoogleCodeRequest request)
-        {
-            try
-            {
-                Console.WriteLine(request.Code);
-                Console.WriteLine(request.RedirectUri);
-
-                var tokenResponse = await _googleAuthService.ExchangeCodeForTokenAsync(request.Code, request.RedirectUri);
-
-                if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Failed to exchange authorization code for access token"
-                    });
-                }
-
-                var googleUser = await _googleAuthService.GetUserInfoAsync(tokenResponse.AccessToken);
-
-                if (googleUser == null || string.IsNullOrEmpty(googleUser.Email))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Failed to get user information from Google"
-                    });
-                }
-
-                var user = await _userManager.FindByEmailAsync(googleUser.Email);
-
-                if (user == null)
-                {
-                    // Create new user
-                    user = new ApplicationUser
-                    {
-                        UserName = googleUser.Email,
-                        Email = googleUser.Email,
-                        FirstName = googleUser.GivenName ?? "",
-                        LastName = googleUser.FamilyName ?? "",
-                        GoogleId = googleUser.Id,
-                        IsGoogleUser = true,
-                        ProfilePictureUrl = googleUser.Picture,
-                        EmailConfirmed = googleUser.VerifiedEmail
-                    };
-
-                    var result = await _userManager.CreateAsync(user);
-                    if (!result.Succeeded)
-                    {
-                        return BadRequest(new ApiResponse<object>
-                        {
-                            Success = false,
-                            Message = "Failed to create user account",
-                            Errors = result.Errors.Select(e => e.Description).ToList()
-                        });
-                    }
-
-                    // Add user to default role
-                    await _userManager.AddToRoleAsync(user, "User");
-                }
-                else
-                {
-                    // Update existing user with Google info if not already a Google user
-                    if (!user.IsGoogleUser)
-                    {
-                        user.GoogleId = googleUser.Id;
-                        user.IsGoogleUser = true;
-                        user.ProfilePictureUrl = googleUser.Picture;
-                        await _userManager.UpdateAsync(user);
-                    }
-                }
-
-                var token = await _jwtTokenService.GenerateTokenAsync(user);
-                var roles = await _userManager.GetRolesAsync(user);
-
-                return Ok(new ApiResponse<AuthResponse>
-                {
-                    Success = true,
-                    Message = "Google login successful",
-                    Data = new AuthResponse
-                    {
-                        Token = token,
-                        User = new UserResponse
-                        {
-                            Id = user.Id,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            DateOfBirth = user.DateOfBirth,
-                            ProfilePictureUrl = user.ProfilePictureUrl,
-                            Roles = roles.ToList()
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Google authentication failed",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
-
-        [HttpPost("google-jwt")]
-        public async Task<IActionResult> GoogleJwtLogin([FromBody] GoogleJwtRequest request)
-        {
-            try
-            {
-                // Validate the Google JWT token
-                var googleUser = await _googleAuthService.ValidateGoogleJwtAsync(request.Credential);
-
-                if (googleUser == null || string.IsNullOrEmpty(googleUser.Email))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Invalid Google JWT token"
-                    });
-                }
-
-                var user = await _userManager.FindByEmailAsync(googleUser.Email);
-
-                if (user == null)
-                {
-                    // Create new user
-                    user = new ApplicationUser
-                    {
-                        UserName = googleUser.Email,
-                        Email = googleUser.Email,
-                        FirstName = googleUser.GivenName ?? "",
-                        LastName = googleUser.FamilyName ?? "",
-                        GoogleId = googleUser.Id,
-                        IsGoogleUser = true,
-                        ProfilePictureUrl = googleUser.Picture,
-                        EmailConfirmed = googleUser.VerifiedEmail
-                    };
-
-                    var result = await _userManager.CreateAsync(user);
-                    if (!result.Succeeded)
-                    {
-                        return BadRequest(new ApiResponse<object>
-                        {
-                            Success = false,
-                            Message = "Failed to create user account",
-                            Errors = result.Errors.Select(e => e.Description).ToList()
-                        });
-                    }
-
-                    // Add user to default role
-                    await _userManager.AddToRoleAsync(user, "User");
-                }
-                else
-                {
-                    // Update existing user with Google info if not already a Google user
-                    if (!user.IsGoogleUser)
-                    {
-                        user.GoogleId = googleUser.Id;
-                        user.IsGoogleUser = true;
-                        user.ProfilePictureUrl = googleUser.Picture;
-                        await _userManager.UpdateAsync(user);
-                    }
-                }
-
-                var token = await _jwtTokenService.GenerateTokenAsync(user);
-                var roles = await _userManager.GetRolesAsync(user);
-
-                return Ok(new ApiResponse<AuthResponse>
-                {
-                    Success = true,
-                    Message = "Google authentication successful",
-                    Data = new AuthResponse
-                    {
-                        Token = token,
-                        User = new UserResponse
-                        {
-                            Id = user.Id,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            DateOfBirth = user.DateOfBirth,
-                            ProfilePictureUrl = user.ProfilePictureUrl,
-                            Roles = roles.ToList()
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Google authentication failed",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
@@ -558,7 +99,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var user = await _userManager.FindByEmailAsync(request.Email);
+            var user = await userManager.FindByEmailAsync(request.Email);
             if (user == null)
             {
                 return Unauthorized(new ApiResponse<object>
@@ -568,12 +109,22 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+            // Check if email is confirmed (only for non-Google users)
+            if (!user.IsGoogleUser && !user.EmailConfirmed)
+            {
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Email not confirmed. Please check your email and confirm your account."
+                });
+            }
+
+            var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, false);
 
             if (result.Succeeded)
             {
-                var token = await _jwtTokenService.GenerateTokenAsync(user);
-                var roles = await _userManager.GetRolesAsync(user);
+                var token = await jwtTokenService.GenerateTokenAsync(user);
+                var roles = await userManager.GetRolesAsync(user);
 
                 return Ok(new ApiResponse<AuthResponse>
                 {
@@ -610,12 +161,115 @@ namespace eShop.Api.Controllers
                 Message = "Invalid email or password"
             });
         }
+        
+        [HttpGet("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid email confirmation request"
+                });
+            }
+
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "User not found"
+                });
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Email is already confirmed"
+                });
+            }
+
+            var result = await userManager.ConfirmEmailAsync(user, token);
+
+            if (result.Succeeded)
+            {
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Email confirmed successfully"
+                });
+            }
+
+            return BadRequest(new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Email confirmation failed",
+                Errors = result.Errors.Select(e => e.Description).ToList()
+            });
+        }
+        
+        [HttpPost("resend-email-confirmation")]
+        public async Task<IActionResult> ResendEmailConfirmation([FromBody] ResendEmailConfirmationRequestDetailed request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid model state",
+                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
+                });
+            }
+
+            var user = await userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                // Don't reveal that the user does not exist
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "If the email exists in our system, a confirmation email has been sent."
+                });
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Email is already confirmed"
+                });
+            }
+
+            // Generate new email confirmation token
+            var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = Url.Action("ConfirmEmail", "Auth",
+                new { userId = user.Id, token = emailToken },
+                Request.Scheme);
+
+            // Send confirmation email
+            var emailContent = EmailTemplate.GetEmailConfirmationTemplate(
+                user.FirstName,
+                confirmationLink);
+
+            await emailSender.SendEmailAsync(user.Email, "Confirm Your Email", emailContent);
+
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                Message = "Confirmation email sent successfully"
+            });
+        }
 
         [HttpPost("logout")]
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            await _signInManager.SignOutAsync();
+            await signInManager.SignOutAsync();
             return Ok(new ApiResponse<object>
             {
                 Success = true,
@@ -637,7 +291,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var user = await _userManager.GetUserAsync(User);
+            var user = await userManager.GetUserAsync(User);
             if (user == null)
             {
                 return NotFound(new ApiResponse<object>
@@ -647,7 +301,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            var result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
 
             if (result.Succeeded)
             {
@@ -670,7 +324,7 @@ namespace eShop.Api.Controllers
         [Authorize]
         public async Task<IActionResult> GetProfile()
         {
-            var user = await _userManager.GetUserAsync(User);
+            var user = await userManager.GetUserAsync(User);
             if (user == null)
             {
                 return NotFound(new ApiResponse<object>
@@ -680,7 +334,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await userManager.GetRolesAsync(user);
 
             return Ok(new ApiResponse<UserResponse>
             {
@@ -712,7 +366,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var user = await _userManager.GetUserAsync(User);
+            var user = await userManager.GetUserAsync(User);
             if (user == null)
             {
                 return NotFound(new ApiResponse<object>
@@ -722,16 +376,32 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            user.FirstName = request.FirstName;
-            user.LastName = request.LastName;
-            user.DateOfBirth = request.DateOfBirth;
+            if (request.FirstName == null && request.LastName == null && request.DateOfBirth == null)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "At least one field is required"
+                });
+            }
 
-            var result = await _userManager.UpdateAsync(user);
+            if (request.FirstName != null)
+            {
+                user.FirstName = request.FirstName;
+            }
+            if (request.LastName != null)
+            {
+                user.LastName = request.LastName;
+            }
+            if (request.DateOfBirth != null)
+            {
+                user.DateOfBirth = request.DateOfBirth;
+            }
 
+            var result = await userManager.UpdateAsync(user);
             if (result.Succeeded)
             {
-                var roles = await _userManager.GetRolesAsync(user);
-
+                var roles = await userManager.GetRolesAsync(user);
                 return Ok(new ApiResponse<UserResponse>
                 {
                     Success = true,
@@ -760,7 +430,7 @@ namespace eShop.Api.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
         {
-            var user = await _userManager.FindByEmailAsync(request.Email);
+            var user = await userManager.FindByEmailAsync(request.Email);
             if (user == null)
             {
                 return NotFound(new ApiResponse<object>
@@ -770,7 +440,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            if (!await _roleManager.RoleExistsAsync(request.Role))
+            if (!await roleManager.RoleExistsAsync(request.Role))
             {
                 return BadRequest(new ApiResponse<object>
                 {
@@ -779,7 +449,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var result = await _userManager.AddToRoleAsync(user, request.Role);
+            var result = await userManager.AddToRoleAsync(user, request.Role);
 
             if (result.Succeeded)
             {
@@ -796,6 +466,100 @@ namespace eShop.Api.Controllers
                 Message = "Role assignment failed",
                 Errors = result.Errors.Select(e => e.Description).ToList()
             });
+        }
+
+        [HttpPost("google-jwt")]
+        public async Task<IActionResult> GoogleJwtLogin([FromBody] GoogleJwtRequest request)
+        {
+            try
+            {
+                // Validate the Google JWT token
+                var googleUser = await googleAuthService.ValidateGoogleJwtAsync(request.Credential);
+
+                if (googleUser == null || string.IsNullOrEmpty(googleUser.Email))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Invalid Google JWT token"
+                    });
+                }
+
+                var user = await userManager.FindByEmailAsync(googleUser.Email);
+
+                if (user == null)
+                {
+                    // Create new user
+                    user = new ApplicationUser
+                    {
+                        UserName = googleUser.Email,
+                        Email = googleUser.Email,
+                        FirstName = googleUser.GivenName ?? "",
+                        LastName = googleUser.FamilyName ?? "",
+                        GoogleId = googleUser.Id,
+                        IsGoogleUser = true,
+                        ProfilePictureUrl = googleUser.Picture,
+                        EmailConfirmed = googleUser.VerifiedEmail
+                    };
+
+                    var result = await userManager.CreateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        return BadRequest(new ApiResponse<object>
+                        {
+                            Success = false,
+                            Message = "Failed to create user account",
+                            Errors = result.Errors.Select(e => e.Description).ToList()
+                        });
+                    }
+
+                    // Add user to default role
+                    await userManager.AddToRoleAsync(user, "User");
+                }
+                else
+                {
+                    // Update existing user with Google info if not already a Google user
+                    if (!user.IsGoogleUser)
+                    {
+                        user.GoogleId = googleUser.Id;
+                        user.IsGoogleUser = true;
+                        user.ProfilePictureUrl = googleUser.Picture;
+                        await userManager.UpdateAsync(user);
+                    }
+                }
+
+                var token = await jwtTokenService.GenerateTokenAsync(user);
+                var roles = await userManager.GetRolesAsync(user);
+
+                return Ok(new ApiResponse<AuthResponse>
+                {
+                    Success = true,
+                    Message = "Google authentication successful",
+                    Data = new AuthResponse
+                    {
+                        Token = token,
+                        User = new UserResponse
+                        {
+                            Id = user.Id,
+                            Email = user.Email,
+                            FirstName = user.FirstName,
+                            LastName = user.LastName,
+                            DateOfBirth = user.DateOfBirth,
+                            ProfilePictureUrl = user.ProfilePictureUrl,
+                            Roles = roles.ToList()
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Google authentication failed",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
         }
     }
 }
