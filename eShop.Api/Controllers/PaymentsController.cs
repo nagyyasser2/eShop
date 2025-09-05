@@ -82,39 +82,6 @@ namespace eShop.Api.Controllers
             }
         }
 
-        [HttpPost("create-payment-intent")]
-        [Authorize]
-        public async Task<IActionResult> CreatePaymentIntent([FromBody] ProcessStripePaymentDto paymentDto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var userEmail = User.FindFirstValue(ClaimTypes.Email);
-
-                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
-                    return Unauthorized();
-
-                // Set customer email if not provided
-                if (string.IsNullOrEmpty(paymentDto.CustomerEmail))
-                    paymentDto.CustomerEmail = userEmail;
-
-                var paymentIntent = await _paymentService.CreatePaymentIntentAsync(paymentDto);
-                return Ok(paymentIntent);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating payment intent for order {OrderId}", paymentDto.OrderId);
-                return StatusCode(500, new { Message = "Failed to create payment intent.", Error = ex.Message });
-            }
-        }
-
         [HttpPost("create-checkout-session")]
         [Authorize]
         public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionDto checkoutDto)
@@ -122,54 +89,19 @@ namespace eShop.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
 
-                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
-                    return Unauthorized();
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
+                return Unauthorized();
 
-                checkoutDto.CustomerEmail = userEmail;
+            checkoutDto.CustomerEmail = userEmail;
 
-                var session = await _paymentService.CreateCheckoutSessionAsync(checkoutDto);
-                return Ok(new { SessionId = session.Id, Url = session.Url });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating checkout session for order {OrderId}", checkoutDto.OrderId);
-                return StatusCode(500, new { Message = "Failed to create checkout session.", Error = ex.Message });
-            }
+            var session = await _paymentService.CreateCheckoutSessionAsync(checkoutDto);
+            return Ok(new { SessionId = session.Id, session.Url });
+           
         }
         
-        [HttpPost("confirm")]
-        [Authorize]
-        public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPaymentDto confirmDto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            try
-            {
-                var payment = await _paymentService.ConfirmStripePaymentAsync(confirmDto);
-                return Ok(new { Message = "Payment confirmed successfully.", Payment = payment });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error confirming payment for PaymentIntent {PaymentIntentId}",
-                    confirmDto.PaymentIntentId);
-                return StatusCode(500, new { Message = "Failed to confirm payment.", Error = ex.Message });
-            }
-        }
-
         [HttpPost("refund")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RefundPayment([FromBody] RefundPaymentDto refundDto)
@@ -197,34 +129,22 @@ namespace eShop.Api.Controllers
             }
         }
 
-        [HttpPost("webhook")]
+        [HttpPost("stripe-webhook")]
         [AllowAnonymous]
         public async Task<IActionResult> StripeWebhook()
         {
-            try
-            {
-                var payload = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-                var signature = Request.Headers["Stripe-Signature"].FirstOrDefault();
+            var payload = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+            var signature = Request.Headers["Stripe-Signature"].FirstOrDefault();
 
-                if (string.IsNullOrEmpty(signature))
-                    return BadRequest("Missing Stripe signature.");
+            if (string.IsNullOrEmpty(signature))
+                return BadRequest("Missing Stripe signature.");
 
-                var success = await _paymentService.HandleStripeWebhookAsync(payload, signature);
+            var success = await _paymentService.HandleStripeWebhookAsync(payload, signature);
 
-                if (success)
-                    return Ok();
-                else
-                    return BadRequest("Failed to process webhook.");
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Unauthorized("Invalid webhook signature.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing Stripe webhook");
-                return StatusCode(500, "Webhook processing failed.");
-            }
+            if (success)
+                return Ok();
+            else
+                return BadRequest("Failed to process webhook.");
         }
 
         [HttpGet("order/{orderId}/total-paid")]
