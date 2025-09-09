@@ -46,11 +46,11 @@ namespace eShop.Api.Controllers
             return Ok(order);
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetOrdersByUser(string id)
+        [HttpGet("myorders")]
+        public async Task<IActionResult> GetOrdersByUser()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId != id && !User.IsInRole("Admin"))
+            if (userId == null)
             {
                 return Unauthorized();
             }

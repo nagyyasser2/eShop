@@ -88,7 +88,7 @@ namespace eShop.Core.Services.Implementations
 
         public async Task<IEnumerable<Order>> GetUserOrdersAsync(string userId)
         {
-            return await _unitOfWork.OrderRepository.FindAllAsync(o => o.UserId == userId)
+            return await _unitOfWork.OrderRepository.FindAllAsync(o => o.UserId == userId, ["OrderItems"])
                    ?? Enumerable.Empty<Order>();
         }
 

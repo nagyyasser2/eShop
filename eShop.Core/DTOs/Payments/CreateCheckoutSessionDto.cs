@@ -9,6 +9,6 @@ namespace eShop.Core.DTOs.Payments
     public class CreateCheckoutSessionDto
     {
         public int OrderId { get; set; }
-        public string CustomerEmail { get; set; }
+        public string? CustomerEmail { get; set; }
     }
 }
