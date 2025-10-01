@@ -24,7 +24,8 @@ namespace eShop.Api.Controllers
         public async Task<IActionResult> GetAllOrders([FromQuery] int page, [FromQuery] int size = 10)
         {
             var orders = await _orderService.GetAllOrdersAsync(page, size);
-            return Ok(orders);
+            var mappedOrders = _mapper.Map<List<OrderDto>>(orders);
+            return Ok(mappedOrders);
         }
 
         [HttpGet("{id}")]

@@ -1,4 +1,5 @@
-﻿using eShop.Core.Enums;
+﻿using eShop.Core.DTOs.Users;
+using eShop.Core.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,6 +33,7 @@ namespace eShop.Core.DTOs.Orders
         public DateTime? ShippedAt { get; set; }
         public DateTime? DeliveredAt { get; set; }
         public string UserId { get; set; }
+        public UserDto User { get; set; }
         public List<CreateOrderItemDto> OrderItems { get; set; } = new List<CreateOrderItemDto>();
         public List<PaymentDto> Payments { get; set; } = new List<PaymentDto>();
     }

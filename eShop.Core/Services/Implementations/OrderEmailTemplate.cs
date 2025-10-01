@@ -177,7 +177,7 @@ namespace eShop.Core.Services.Implementations
     {
         { PaymentStatus.Pending.ToString(), "is pending" },
         { PaymentStatus.Processing.ToString(), "is being processed" },
-        { PaymentStatus.Paid.ToString(), "has been paid" },
+        { PaymentStatus.Completed.ToString(), "has been paid" },
         { PaymentStatus.Failed.ToString(), "payment failed" },
         { PaymentStatus.Refunded.ToString(), "has been refunded" },
         { PaymentStatus.Cancelled.ToString(), "has been cancelled" }

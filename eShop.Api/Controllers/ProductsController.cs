@@ -115,44 +115,86 @@ namespace eShop.Api.Controllers
 
         [HttpGet]
         public async Task<IActionResult> Get(
+            [FromQuery] string[]? tags,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
             [FromQuery] bool? featured = null,
             [FromQuery] bool? active = null,
             [FromQuery] int? categoryId = null,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] string? searchQuery = null,
+            [FromQuery] decimal? minPrice = null,
+            [FromQuery] decimal? maxPrice = null
+        )
         {
             try
             {
-                // Ensure page and pageSize are valid
                 if (page < 1) page = 1;
                 if (pageSize < 1) pageSize = 10;
-
                 int skip = (page - 1) * pageSize;
 
-                // Build the filter expression
-                Expression<Func<Product, bool>> filter = p => true; // Default: no filter
+                Expression<Func<Product, bool>> filter = p => true;
+
                 if (featured.HasValue)
                 {
-                    filter = p => p.IsFeatured == featured.Value; // Handle both true (featured) and false (non-featured)
-                }
-                else if (active.HasValue)
-                {
-                    filter = p => p.IsActive == active.Value; // Handle both true (active) and false (inactive)
-                }
-                else if (categoryId.HasValue)
-                {
-                    filter = p => p.CategoryId == categoryId.Value;
+                    Expression<Func<Product, bool>> featuredFilter = p => p.IsFeatured == featured.Value;
+                    filter = CombineFilters(filter, featuredFilter);
                 }
 
-                // Get filtered and paginated products with total count
+                if (active.HasValue)
+                {
+                    Expression<Func<Product, bool>> activeFilter = p => p.IsActive == active.Value;
+                    filter = CombineFilters(filter, activeFilter);
+                }
+
+                if (categoryId.HasValue)
+                {
+                    Expression<Func<Product, bool>> categoryFilter = p => p.CategoryId == categoryId.Value;
+                    filter = CombineFilters(filter, categoryFilter);
+                }
+
+                if (!string.IsNullOrWhiteSpace(searchQuery))
+                {
+                    Expression<Func<Product, bool>> searchFilter = p => p.Name.Contains(searchQuery) || p.Description.Contains(searchQuery);
+                    filter = CombineFilters(filter, searchFilter);
+                }
+
+                if (tags?.Length > 0)
+                {
+                    Expression<Func<Product, bool>> tagsFilter = p =>
+                        tags.Any(tag => p.Tags != null &&
+                                       (p.Tags == tag ||
+                                        p.Tags.StartsWith(tag + ",") ||
+                                        p.Tags.EndsWith("," + tag) ||
+                                        p.Tags.Contains("," + tag + ",")));
+                    filter = CombineFilters(filter, tagsFilter);
+                }
+
+                if (minPrice.HasValue || maxPrice.HasValue)
+                {
+                    Expression<Func<Product, bool>> priceFilter = p =>
+                        (!minPrice.HasValue || p.Price >= minPrice.Value) &&
+                        (!maxPrice.HasValue || p.Price <= maxPrice.Value);
+                    filter = CombineFilters(filter, priceFilter);
+                } 
+
                 var (products, totalCount) = await productService.GetFilteredPagedAsync(filter, skip, pageSize);
-
                 return Ok(new { data = products, count = totalCount, page, pageSize });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while retrieving products.", error = ex.Message });
             }
+        }
+
+        private Expression<Func<Product, bool>> CombineFilters(
+            Expression<Func<Product, bool>> filter1,
+            Expression<Func<Product, bool>> filter2)
+        {
+            var parameter = Expression.Parameter(typeof(Product), "p");
+            var body = Expression.AndAlso(
+                Expression.Invoke(filter1, parameter),
+                Expression.Invoke(filter2, parameter));
+            return Expression.Lambda<Func<Product, bool>>(body, parameter);
         }
 
         [HttpGet("{id}")]

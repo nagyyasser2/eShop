@@ -5,13 +5,12 @@ namespace eShop.Core.Enums
     public enum PaymentStatus
     {
         Pending,
-        Paid,
-        Failed,
-        Processing,
+        Processing, 
+        Completed,
         CashOnDelivery,
-        Refunded,
+        Failed,
         Cancelled,
+        Refunded,
         Disputed,
-        Completed
     }
 }

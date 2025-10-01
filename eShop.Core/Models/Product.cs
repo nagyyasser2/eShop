@@ -7,22 +7,25 @@ namespace eShop.Core.Models
     {
         public int Id { get; set; }
         [Required, MaxLength(200)]
-        public string Name { get; set; }
-        public string? Description { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; } = string.Empty;
         public string? ShortDescription { get; set; }
         [Required, MaxLength(100)]
-        public string SKU { get; set; }
+        public string SKU { get; set; } = string.Empty;
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal? ComparePrice { get; set; }
+
         public int StockQuantity { get; set; }
         public bool TrackQuantity { get; set; } = true;
         public bool IsActive { get; set; } = true;
         public bool IsFeatured { get; set; } = false;
         public double Weight { get; set; } = 0;
-        public string? Dimensions { get; set; }
-        public string? Tags { get; set; }
+        public string? Dimensions { get; set; } = string.Empty;
+        public string? Tags { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Foreign Keys

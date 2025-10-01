@@ -1,8 +1,9 @@
 ﻿using AutoMapper;
-using eShopApi.Core.Enums;
+using eShop.Core.Enums;
+using eShop.Core.DTOs;
 using eShop.Core.DTOs.Orders;
 using eShop.Core.Models;
-using eShop.Core.DTOs;
+using eShop.Core.DTOs.Users;
 
 namespace eShop.Core.Mapper
 {
@@ -28,9 +29,9 @@ namespace eShop.Core.Mapper
             CreateMap<Order, OrderDto>()
                 .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems))
                 .ForMember(dest => dest.Payments, opt => opt.MapFrom(src => src.Payments))
+                .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User))
                 .ReverseMap();
 
-            // Fixed: Don't ignore OrderId - it should be mapped from the DTO
             CreateMap<CreateOrderItemDto, OrderItem>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.Order, opt => opt.Ignore())
@@ -52,6 +53,22 @@ namespace eShop.Core.Mapper
                 .ReverseMap();
 
             CreateMap<Payment, PaymentDto>()
+                .ReverseMap();
+
+            CreateMap<ApplicationUser, UserDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
+                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+                .ForMember(dest => dest.City, opt => opt.MapFrom(src => src.City))
+                .ForMember(dest => dest.State, opt => opt.MapFrom(src => src.State))
+                .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.ZipCode))
+                .ForMember(dest => dest.Country, opt => opt.MapFrom(src => src.Country))
+                .ForMember(dest => dest.CreatedDate, opt => opt.MapFrom(src => src.CreatedDate))
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
+                .ForMember(dest => dest.IsGoogleUser, opt => opt.MapFrom(src => src.IsGoogleUser))
+                .ForMember(dest => dest.ProfilePictureUrl, opt => opt.MapFrom(src => src.ProfilePictureUrl))
                 .ReverseMap();
         }
     }

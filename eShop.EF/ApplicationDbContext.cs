@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using eShop.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using eShop.EF.Configurations;
+using eShop.Core.Models;
 
 namespace eShop.EF
 {
@@ -12,24 +12,21 @@ namespace eShop.EF
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure ProductImage entity
             new ProductImageEntityTypeConfiguration().Configure(modelBuilder.Entity<Image>());
 
-            // Configure Category-Product relationship for CategoryId to set null on delete
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.Category)
                 .WithMany(c => c.Products)
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Configure self-referencing relationship in Category
             modelBuilder.Entity<Category>()
                 .HasOne(c => c.ParentCategory)
                 .WithMany(c => c.ChildCategories)
                 .HasForeignKey(c => c.ParentCategoryId)
-                .OnDelete(DeleteBehavior.Restrict); // Prevent cascading deletes for self-referencing
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Seed Roles
+
             modelBuilder.Entity<IdentityRole>().HasData(
                 new IdentityRole
                 {

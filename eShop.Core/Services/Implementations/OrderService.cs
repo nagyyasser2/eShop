@@ -94,7 +94,7 @@ namespace eShop.Core.Services.Implementations
 
         public async Task<IEnumerable<Order>> GetAllOrdersAsync(int page = 1, int size = 10)
         {
-            return await _unitOfWork.OrderRepository.GetAllPagedAsync(page, size);
+            return await _unitOfWork.OrderRepository.GetAllPagedAsync(page, size, ["User", "OrderItems"]);
         }
 
         public async Task<Order> UpdateOrderStatusAsync(int orderId, ShippingStatus? shippingStatus, PaymentStatus? paymentStatus)

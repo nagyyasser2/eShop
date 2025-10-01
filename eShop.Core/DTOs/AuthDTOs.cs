@@ -57,13 +57,16 @@ namespace eShop.Core.DTOs
 
     public class UpdateProfileRequest
     {
-        [StringLength(50)]
         public string? FirstName { get; set; }
-
-        [StringLength(50)]
         public string? LastName { get; set; }
-        
-        public DateTime DateOfBirth { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+
+        // Add these address properties
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? ZipCode { get; set; }
+        public string? Country { get; set; }
     }
 
     public class AssignRoleRequest
@@ -76,20 +79,21 @@ namespace eShop.Core.DTOs
         public string Role { get; set; }
     }
 
-    public class AuthResponse
-    {
-        public string Token { get; set; }
-        public UserResponse User { get; set; }
-    }
-
     public class UserResponse
     {
         public string Id { get; set; }
         public string Email { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public string ProfilePictureUrl { get; set; }
-        public DateTime DateOfBirth { get; set; }
-        public List<string> Roles { get; set; } = new List<string>();
+        public DateTime? DateOfBirth { get; set; }
+        public string? ProfilePictureUrl { get; set; }
+        public List<string> Roles { get; set; }
+
+        // Add these address properties
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? ZipCode { get; set; }
+        public string? Country { get; set; }
     }
 }

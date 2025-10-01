@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using eShop.Core.Models;
 using eShop.Core.DTOs;
 using eShop.Core.Templates;
+using eShop.Core.DTOs.Auth;
+using Microsoft.IdentityModel.Tokens;
 
 namespace eShop.Api.Controllers
 {
@@ -85,7 +87,7 @@ namespace eShop.Api.Controllers
                 Errors = result.Errors.Select(e => e.Description).ToList()
             });
         }
-        
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
@@ -123,26 +125,13 @@ namespace eShop.Api.Controllers
 
             if (result.Succeeded)
             {
-                var token = await jwtTokenService.GenerateTokenAsync(user);
-                var roles = await userManager.GetRolesAsync(user);
+                var authResponse = await jwtTokenService.GenerateTokensAsync(user);
 
                 return Ok(new ApiResponse<AuthResponse>
                 {
                     Success = true,
                     Message = "Login successful",
-                    Data = new AuthResponse
-                    {
-                        Token = token,
-                        User = new UserResponse
-                        {
-                            Id = user.Id,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            DateOfBirth = user.DateOfBirth,
-                            Roles = roles.ToList()
-                        }
-                    }
+                    Data = authResponse
                 });
             }
 
@@ -161,7 +150,7 @@ namespace eShop.Api.Controllers
                 Message = "Invalid email or password"
             });
         }
-        
+
         [HttpGet("confirm-email")]
         public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
         {
@@ -269,6 +258,15 @@ namespace eShop.Api.Controllers
         [Authorize]
         public async Task<IActionResult> Logout()
         {
+            var user = await userManager.GetUserAsync(User);
+            if (user != null)
+            {
+                // Clear refresh token
+                user.RefreshToken = null;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow;
+                await userManager.UpdateAsync(user);
+            }
+
             await signInManager.SignOutAsync();
             return Ok(new ApiResponse<object>
             {
@@ -347,11 +345,18 @@ namespace eShop.Api.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     DateOfBirth = user.DateOfBirth,
+                    ProfilePictureUrl = user.ProfilePictureUrl,
+                    Address = user.Address,        // Add this
+                    City = user.City,              // Add this
+                    State = user.State,            // Add this
+                    ZipCode = user.ZipCode,        // Add this
+                    Country = user.Country,        // Add this
                     Roles = roles.ToList()
                 }
             });
         }
 
+        // Update the UpdateProfile method in AuthController
         [HttpPut("profile")]
         [Authorize]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
@@ -376,7 +381,10 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            if (request.FirstName == null && request.LastName == null && request.DateOfBirth == null)
+            // Check if at least one field is provided
+            if (request.FirstName == null && request.LastName == null && request.DateOfBirth == null &&
+                request.Address == null && request.City == null && request.State == null &&
+                request.ZipCode == null && request.Country == null)
             {
                 return BadRequest(new ApiResponse<object>
                 {
@@ -385,6 +393,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
+            // Update basic profile fields
             if (request.FirstName != null)
             {
                 user.FirstName = request.FirstName;
@@ -395,7 +404,29 @@ namespace eShop.Api.Controllers
             }
             if (request.DateOfBirth != null)
             {
-                user.DateOfBirth = request.DateOfBirth;
+                user.DateOfBirth = request.DateOfBirth.Value;
+            }
+
+            // Update address fields
+            if (request.Address != null)
+            {
+                user.Address = request.Address;
+            }
+            if (request.City != null)
+            {
+                user.City = request.City;
+            }
+            if (request.State != null)
+            {
+                user.State = request.State;
+            }
+            if (request.ZipCode != null)
+            {
+                user.ZipCode = request.ZipCode;
+            }
+            if (request.Country != null)
+            {
+                user.Country = request.Country;
             }
 
             var result = await userManager.UpdateAsync(user);
@@ -413,6 +444,12 @@ namespace eShop.Api.Controllers
                         FirstName = user.FirstName,
                         LastName = user.LastName,
                         DateOfBirth = user.DateOfBirth,
+                        ProfilePictureUrl = user.ProfilePictureUrl,
+                        Address = user.Address,        // Add this
+                        City = user.City,              // Add this
+                        State = user.State,            // Add this
+                        ZipCode = user.ZipCode,        // Add this
+                        Country = user.Country,        // Add this
                         Roles = roles.ToList()
                     }
                 });
@@ -528,27 +565,13 @@ namespace eShop.Api.Controllers
                     }
                 }
 
-                var token = await jwtTokenService.GenerateTokenAsync(user);
-                var roles = await userManager.GetRolesAsync(user);
+                var authResponse = await jwtTokenService.GenerateTokensAsync(user);
 
                 return Ok(new ApiResponse<AuthResponse>
                 {
                     Success = true,
                     Message = "Google authentication successful",
-                    Data = new AuthResponse
-                    {
-                        Token = token,
-                        User = new UserResponse
-                        {
-                            Id = user.Id,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            DateOfBirth = user.DateOfBirth,
-                            ProfilePictureUrl = user.ProfilePictureUrl,
-                            Roles = roles.ToList()
-                        }
-                    }
+                    Data = authResponse
                 });
             }
             catch (Exception ex)
@@ -560,6 +583,28 @@ namespace eShop.Api.Controllers
                     Errors = new List<string> { ex.Message }
                 });
             }
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            if (string.IsNullOrEmpty(request.AccessToken) || string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Access token and refresh token are required"
+                });
+            }
+
+            var authResponse = await jwtTokenService.RefreshTokenAsync(request.AccessToken, request.RefreshToken);
+
+            return Ok(new ApiResponse<AuthResponse>
+            {
+                Success = true,
+                Message = "Token refreshed successfully",
+                Data = authResponse
+            });
         }
     }
 }

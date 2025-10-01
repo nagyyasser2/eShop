@@ -11,8 +11,8 @@ namespace eShop.Core.Models
         public decimal UnitPrice { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; }
-        public string ProductName { get; set; } // Snapshot of product name
-        public string? ProductSKU { get; set; } // Snapshot of product SKU
+        public string ProductName { get; set; } 
+        public string? ProductSKU { get; set; }
 
         // Foreign Keys
         public int OrderId { get; set; }

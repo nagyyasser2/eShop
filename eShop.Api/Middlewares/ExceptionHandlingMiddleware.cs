@@ -13,7 +13,7 @@ namespace eShop.Api.Middlewares
         {
             try
             {
-                await _next(context); // continue pipeline
+                await _next(context); 
             }
             catch (Exception ex)
             {
