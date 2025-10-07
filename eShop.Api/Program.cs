@@ -8,11 +8,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using eShop.Core.Configurations;
 using eShop.Api.Middlewares;
+using Hangfire.SqlServer;
+using eShop.Api.Filters;
 using eShop.Core.Models;
 using eShop.Core.Mapper;
 using System.Text;
+using Hangfire;
 using eShop.EF;
 using Stripe;
+using eShop.Core.MappingProfiles;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,36 +32,53 @@ builder.Services.AddCors(options =>
         });
 });
 
-// Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
-// Configurations
 builder.Services.Configure<EmailConfiguration>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
+builder.Services.Configure<FrontendConfiguration>(builder.Configuration.GetSection("Frontend"));
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
-// Add Unit of Work and Repositories
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IFileService, eShop.Core.Services.Implementations.FileService>();
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"),
+        new SqlServerStorageOptions
+        {
+            CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+            SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+            QueuePollInterval = TimeSpan.Zero,
+            UseRecommendedIsolationLevel = true,
+            DisableGlobalLocks = true
+        }));
+
 builder.Services.AddScoped<IProductService, eShop.Core.Services.Implementations.ProductService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IFileService, eShop.Core.Services.Implementations.FileService>();
+builder.Services.AddScoped<IProductCacheService, ProductCacheService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
-builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IVariantService, VariantService>();
-builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
-builder.Services.AddAutoMapper(typeof(MappingProfile));
-builder.Services.AddAutoMapper(typeof(BannerProfile));
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+
+builder.Services.AddAutoMapper(typeof(CategoryMappingProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(VariantProfileMapping));
 builder.Services.AddAutoMapper(typeof(ProductMappingProfile));
-builder.Services.AddAutoMapper(typeof(CategoryMappingProfile));
 builder.Services.AddAutoMapper(typeof(OrderProfileMapping));
+builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddAutoMapper(typeof(ImageProfile));
+builder.Services.AddAutoMapper(typeof(ProductProfile));
+//builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
-// Add Identity Services
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
@@ -76,7 +98,6 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var signingKey = jwtSettings["SigningKey"];
 
@@ -114,12 +135,13 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClaimActions.MapJsonKey("family_name", "family_name");
 });
 
-// Add Authorization
 builder.Services.AddAuthorizationBuilder()
         .AddPolicy("RequireAdminRole", policy =>
             policy.RequireRole("Admin"))
         .AddPolicy("RequireManagerOrAdmin", policy =>
             policy.RequireRole("Manager", "Admin"));
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
@@ -129,10 +151,14 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
 builder.Services.AddOpenApi();
+builder.Services.AddDistributedMemoryCache();
 
 var app = builder.Build();
+
+app.UseRouting();
 
 if (app.Environment.IsDevelopment())
 {
@@ -143,11 +169,16 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = string.Empty;
     });
 }
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireAuthorizationFilter()]
+});
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -12,13 +12,10 @@ namespace eShop.Core.Models
         public string? ShortDescription { get; set; }
         [Required, MaxLength(100)]
         public string SKU { get; set; } = string.Empty;
-
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
-
         [Column(TypeName = "decimal(18,2)")]
         public decimal? ComparePrice { get; set; }
-
         public int StockQuantity { get; set; }
         public bool TrackQuantity { get; set; } = true;
         public bool IsActive { get; set; } = true;
@@ -27,13 +24,11 @@ namespace eShop.Core.Models
         public string? Dimensions { get; set; } = string.Empty;
         public string? Tags { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         // Foreign Keys
         public int? CategoryId { get; set; }
-
         // Navigation Properties
         public virtual Category? Category { get; set; }
-        public virtual ICollection<Image> Images { get; set; } = new List<Image>();
         public virtual ICollection<Variant> Variants { get; set; } = new List<Variant>();
+        public virtual ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
     }
 }

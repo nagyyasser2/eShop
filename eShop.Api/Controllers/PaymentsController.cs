@@ -3,7 +3,6 @@ using eShop.Core.Services.Abstractions;
 using eShop.Core.DTOs.Payments;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using eShop.Core.DTOs;
 
 namespace eShop.Api.Controllers
 {
@@ -84,7 +83,7 @@ namespace eShop.Api.Controllers
 
         [HttpPost("create-checkout-session")]
         [Authorize]
-        public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionDto checkoutDto)
+        public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionRequest checkoutDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

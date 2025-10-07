@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using eShop.Core.Services.Abstractions;
+using eShop.Core.DTOs.Category;
 using Microsoft.AspNetCore.Mvc;
 using eShop.Core.Models;
-using eShop.Core.DTOs;
 using AutoMapper;
 
 namespace eShop.Api.Controllers
@@ -83,9 +83,15 @@ namespace eShop.Api.Controllers
         public async Task<ActionResult<IEnumerable<CategoryTreeDto>>> GetCategoriesTree()
         {
             var rootCategories = await _unitOfWork.CategoryRepository.GetCategoryTreeAsync();
+
+            if (rootCategories == null || !rootCategories.Any())
+                return NotFound("No categories found.");
+
             var categoryTreeDtos = _mapper.Map<IEnumerable<CategoryTreeDto>>(rootCategories);
-            return Ok(rootCategories);
+
+            return Ok(categoryTreeDtos);
         }
+
 
         [HttpGet("active")]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetActiveCategories(
@@ -101,7 +107,7 @@ namespace eShop.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = "RequireAdminRole")]
+        //[Authorize(Policy = "RequireAdminRole")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<CategoryDto>> CreateCategory([FromForm] CreateCategoryDto categoryDto)
         {
@@ -248,7 +254,7 @@ namespace eShop.Api.Controllers
             await _unitOfWork.CategoryRepository.RemoveAsync(category);
             await _unitOfWork.SaveChangesAsync();
 
-            return Ok(new { id = category.Id, parentCategoryId }); // ✅ return this
+            return Ok(new { id = category.Id, parentCategoryId }); 
         }
 
         [HttpPut("{id}/toggle-status")]

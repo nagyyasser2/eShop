@@ -1,6 +1,7 @@
-﻿using System.Net;
+﻿using eShop.Core.Exceptions;
+using eShop.Core.DTOs.Api; 
 using System.Text.Json;
-using eShop.Core.Exceptions;
+using System.Net;
 
 namespace eShop.Api.Middlewares
 {
@@ -13,7 +14,7 @@ namespace eShop.Api.Middlewares
         {
             try
             {
-                await _next(context); 
+                await _next(context);
             }
             catch (Exception ex)
             {
@@ -27,8 +28,8 @@ namespace eShop.Api.Middlewares
         {
             HttpStatusCode statusCode;
             string message = ex.Message;
+            List<string> errors = new() { ex.Message };
 
-            // Map exception → HTTP status
             switch (ex)
             {
                 case NotFoundException:
@@ -36,33 +37,43 @@ namespace eShop.Api.Middlewares
                     break;
 
                 case BusinessRuleException:
+                case ArgumentNullException:
+                case ArgumentException:
                     statusCode = HttpStatusCode.BadRequest;
                     break;
+
                 case InsufficientStockException:
                     statusCode = HttpStatusCode.Conflict;
                     break;
+
                 case ForbiddenException:
                     statusCode = HttpStatusCode.Forbidden;
                     break;
+
                 default:
                     statusCode = HttpStatusCode.InternalServerError;
-                    message = "An unexpected error occurred."; // don’t expose internals
+                    message = "An unexpected error occurred.";
+                    errors = new List<string> { "An internal server error occurred. Please try again." };
                     break;
             }
 
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)statusCode;
 
-            var result = JsonSerializer.Serialize(new
+            var apiResponse = new ApiResponse<object>
             {
-                error = message,
-                statusCode = (int)statusCode,
-                //traceId = context.TraceIdentifier // helps correlate logs & requests
+                Success = false,
+                Message = message, 
+                Errors = errors,  
+                Data = null
+            };
+
+            var result = JsonSerializer.Serialize(apiResponse, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
 
             return context.Response.WriteAsync(result);
         }
     }
-
-
 }

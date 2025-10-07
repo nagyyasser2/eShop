@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using eShop.Core.Enums;
-using eShop.Core.DTOs;
+using eShop.Core.DTOs.Payments;
 using eShop.Core.DTOs.Orders;
 using eShop.Core.Models;
 using eShop.Core.DTOs.Users;
@@ -47,7 +47,7 @@ namespace eShop.Core.Mapper
             CreateMap<OrderItem, OrderItemDto>()
                 .ReverseMap();
 
-            CreateMap<CreatePaymentDto, Payment>()
+            CreateMap<CreatePaymentRequest, Payment>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.OrderId, opt => opt.Ignore())
                 .ReverseMap();

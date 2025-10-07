@@ -33,9 +33,11 @@ namespace eShop.Core.Services.Implementations
             return query.FirstOrDefault(e => EF.Property<int>(e, "Id") == id);
         }
 
+        // Option 1: Use AsNoTracking + tell EF not to fix up navigation properties
         public async Task<T?> GetByIdAsync(int id, string[]? includes = null)
         {
-            IQueryable<T> query = _dbSet;
+            IQueryable<T> query = _dbSet.AsNoTracking(); 
+
             if (includes != null)
             {
                 foreach (var include in includes)
@@ -43,7 +45,10 @@ namespace eShop.Core.Services.Implementations
                     query = query.Include(include);
                 }
             }
-            return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+
+            return await query
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
         }
 
         public IEnumerable<T> GetAll(string[]? includes = null)
@@ -158,7 +163,7 @@ namespace eShop.Core.Services.Implementations
             IQueryable<T> query = _dbSet;
 
             // Apply includes (eager loading) if provided
-            if (includes != null)
+            if (includes != null && includes.Length > 0)
             {
                 foreach (var include in includes)
                 {

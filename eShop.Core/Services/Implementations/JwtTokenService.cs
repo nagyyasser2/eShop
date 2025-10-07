@@ -1,14 +1,13 @@
-﻿using eShop.Core.Models;
+﻿using Microsoft.Extensions.Configuration;
 using eShop.Core.Services.Abstractions;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Identity;
+using System.Security.Cryptography;
+using System.Security.Claims;
 using eShop.Core.DTOs.Auth;
+using eShop.Core.Models;
 using System.Text;
-using eShop.Core.DTOs;
 
 namespace eShop.Core.Services.Implementations
 {

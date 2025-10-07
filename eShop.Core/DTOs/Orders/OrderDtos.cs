@@ -1,10 +1,6 @@
-﻿using eShop.Core.DTOs.Users;
+﻿using eShop.Core.DTOs.Payments;
+using eShop.Core.DTOs.Users;
 using eShop.Core.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace eShop.Core.DTOs.Orders
 {
@@ -56,7 +52,7 @@ namespace eShop.Core.DTOs.Orders
         public string? ShippingPhone { get; set; }
         public string? UserId { get; set; }
         public List<CreateOrderItemDto> OrderItems { get; set; } = new List<CreateOrderItemDto>();
-        public List<CreatePaymentDto> Payments { get; set; } = new List<CreatePaymentDto>();
+        public List<CreatePaymentRequest> Payments { get; set; } = new List<CreatePaymentRequest>();
     }
 
     public class UpdateOrderDto

@@ -1,5 +1,4 @@
-﻿
-using eShop.Core.Models;
+﻿using eShop.Core.Models;
 
 namespace eShop.Core.Services.Abstractions
 {

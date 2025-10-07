@@ -1,12 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using eShop.Core.Services.Abstractions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using eShop.Core.Configurations;
 using Microsoft.AspNetCore.Mvc;
-using eShop.Core.Models;
-using eShop.Core.DTOs;
+using eShop.Core.DTOs.Emails;
+using eShop.Core.DTOs.Google;
 using eShop.Core.Templates;
 using eShop.Core.DTOs.Auth;
-using Microsoft.IdentityModel.Tokens;
+using eShop.Core.DTOs.Api;
+using eShop.Core.Models;
+
 
 namespace eShop.Api.Controllers
 {
@@ -18,7 +22,8 @@ namespace eShop.Api.Controllers
         RoleManager<IdentityRole> roleManager,
         IGoogleAuthService googleAuthService,
         IJwtTokenService jwtTokenService,
-        IEmailSender emailSender
+        IEmailSender emailSender,
+        IOptions<FrontendConfiguration> frontendConfiguration
             ) : ControllerBase
     {
         [HttpPost("register")]
@@ -41,7 +46,7 @@ namespace eShop.Api.Controllers
                 return BadRequest(new ApiResponse<object>
                 {
                     Success = false,
-                    Message = "User with this email already exists"
+                    Message = "Email already exists."
                 });
             }
 
@@ -62,9 +67,8 @@ namespace eShop.Api.Controllers
 
                 // Generate email confirmation token
                 var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
-                var confirmationLink = Url.Action("ConfirmEmail", "Auth",
-                    new { userId = user.Id, token = emailToken },
-                    Request.Scheme);
+                var frontendConfigurationValue = frontendConfiguration.Value;
+                var confirmationLink = $"{frontendConfigurationValue.Url}/confirmEmail?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
 
                 // Send confirmation email
                 var emailContent = EmailTemplate.GetEmailConfirmationTemplate(
@@ -76,9 +80,10 @@ namespace eShop.Api.Controllers
                 return Ok(new ApiResponse<object>
                 {
                     Success = true,
-                    Message = "User registered successfully. Please check your email to confirm your account."
+                    Message = "Successfully registered. Please check your email to confirm your account."
                 });
             }
+
 
             return BadRequest(new ApiResponse<object>
             {
@@ -151,10 +156,10 @@ namespace eShop.Api.Controllers
             });
         }
 
-        [HttpGet("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmRequest request)
         {
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+            if (string.IsNullOrEmpty(request.UserId) || string.IsNullOrEmpty(request.Token))
             {
                 return BadRequest(new ApiResponse<object>
                 {
@@ -163,7 +168,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var user = await userManager.FindByIdAsync(userId);
+            var user = await userManager.FindByIdAsync(request.UserId);
             if (user == null)
             {
                 return NotFound(new ApiResponse<object>
@@ -182,7 +187,7 @@ namespace eShop.Api.Controllers
                 });
             }
 
-            var result = await userManager.ConfirmEmailAsync(user, token);
+            var result = await userManager.ConfirmEmailAsync(user, request.Token);
 
             if (result.Succeeded)
             {
@@ -346,17 +351,16 @@ namespace eShop.Api.Controllers
                     LastName = user.LastName,
                     DateOfBirth = user.DateOfBirth,
                     ProfilePictureUrl = user.ProfilePictureUrl,
-                    Address = user.Address,        // Add this
-                    City = user.City,              // Add this
-                    State = user.State,            // Add this
-                    ZipCode = user.ZipCode,        // Add this
-                    Country = user.Country,        // Add this
+                    Address = user.Address,
+                    City = user.City,
+                    State = user.State,
+                    ZipCode = user.ZipCode,
+                    Country = user.Country,
                     Roles = roles.ToList()
                 }
             });
         }
 
-        // Update the UpdateProfile method in AuthController
         [HttpPut("profile")]
         [Authorize]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
@@ -445,11 +449,11 @@ namespace eShop.Api.Controllers
                         LastName = user.LastName,
                         DateOfBirth = user.DateOfBirth,
                         ProfilePictureUrl = user.ProfilePictureUrl,
-                        Address = user.Address,        // Add this
-                        City = user.City,              // Add this
-                        State = user.State,            // Add this
-                        ZipCode = user.ZipCode,        // Add this
-                        Country = user.Country,        // Add this
+                        Address = user.Address,
+                        City = user.City,
+                        State = user.State,
+                        ZipCode = user.ZipCode,
+                        Country = user.Country,    
                         Roles = roles.ToList()
                     }
                 });
@@ -606,5 +610,112 @@ namespace eShop.Api.Controllers
                 Data = authResponse
             });
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid model state",
+                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
+                });
+            }
+
+            var user = await userManager.FindByEmailAsync(request.Email);
+
+            // Don't reveal whether the user exists or not for security reasons
+            if (user == null)
+            {
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "If the email exists in our system, a password reset link has been sent."
+                });
+            }
+
+            // Don't allow password reset for Google users
+            if (user.IsGoogleUser)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Google users cannot reset their password. Please sign in with Google."
+                });
+            }
+
+            // Generate password reset token
+            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+            var frontendConfigurationValue = frontendConfiguration.Value;
+            var resetLink = $"{frontendConfigurationValue.Url}/reset-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
+
+            // Send password reset email
+            var emailContent = EmailTemplate.GetPasswordResetTemplate(
+                user.FirstName,
+                resetLink);
+
+            await emailSender.SendEmailAsync(user.Email, "Reset Your Password", emailContent);
+
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                Message = "If the email exists in our system, a password reset link has been sent."
+            });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid model state",
+                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()
+                });
+            }
+
+            var user = await userManager.FindByIdAsync(request.UserId);
+            if (user == null)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid password reset request"
+                });
+            }
+
+            // Don't allow password reset for Google users
+            if (user.IsGoogleUser)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Google users cannot reset their password."
+                });
+            }
+
+            var result = await userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+
+            if (result.Succeeded)
+            {
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Password has been reset successfully. You can now login with your new password."
+                });
+            }
+
+            return BadRequest(new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Password reset failed",
+                Errors = result.Errors.Select(e => e.Description).ToList()
+            });
+        }
+
     }
 }

@@ -238,6 +238,7 @@ namespace eShop.EF.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
@@ -327,7 +328,7 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Banners", (string)null);
+                    b.ToTable("Banners");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Category", b =>
@@ -364,9 +365,13 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ParentCategoryId");
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_Categories_IsActive");
 
-                    b.ToTable("Categories", (string)null);
+                    b.HasIndex("ParentCategoryId")
+                        .HasDatabaseName("IX_Categories_ParentCategoryId");
+
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Image", b =>
@@ -377,30 +382,22 @@ namespace eShop.EF.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AltText")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<bool>("IsAttached")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("bit");
 
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Url")
+                    b.Property<string>("Path")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("Images", (string)null);
+                    b.ToTable("Images");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Order", b =>
@@ -489,9 +486,19 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_Orders_CreatedAt");
 
-                    b.ToTable("Orders", (string)null);
+                    b.HasIndex("ShippingStatus")
+                        .HasDatabaseName("IX_Orders_ShippingStatus");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_Orders_UserId");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("IX_Orders_UserId_CreatedAt");
+
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.OrderItem", b =>
@@ -529,13 +536,15 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_OrderItems_OrderId");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_OrderItems_ProductId");
 
                     b.HasIndex("ProductVariantId");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Page", b =>
@@ -577,7 +586,7 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Pages", (string)null);
+                    b.ToTable("Pages");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Payment", b =>
@@ -626,7 +635,7 @@ namespace eShop.EF.Migrations
 
                     b.HasIndex("PaymentMethodId");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.PaymentMethod", b =>
@@ -656,7 +665,7 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PaymentMethod", (string)null);
+                    b.ToTable("PaymentMethod");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Product", b =>
@@ -718,9 +727,72 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_Products_CreatedAt");
 
-                    b.ToTable("Products", (string)null);
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_Products_IsActive");
+
+                    b.HasIndex("IsFeatured")
+                        .HasDatabaseName("IX_Products_IsFeatured");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Products_Name");
+
+                    b.HasIndex("Price")
+                        .HasDatabaseName("IX_Products_Price");
+
+                    b.HasIndex("SKU")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Products_SKU");
+
+                    b.HasIndex("CategoryId", "Price")
+                        .HasDatabaseName("IX_Products_CategoryId_Price");
+
+                    b.HasIndex("IsActive", "CategoryId")
+                        .HasDatabaseName("IX_Products_IsActive_CategoryId");
+
+                    b.HasIndex("IsActive", "IsFeatured")
+                        .HasDatabaseName("IX_Products_IsActive_IsFeatured");
+
+                    b.HasIndex("IsActive", "Price")
+                        .HasDatabaseName("IX_Products_IsActive_Price");
+
+                    b.HasIndex("IsActive", "IsFeatured", "CreatedAt")
+                        .HasDatabaseName("IX_Products_IsActive_IsFeatured_CreatedAt");
+
+                    b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.ProductImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsAttached")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ProductImages");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Setting", b =>
@@ -753,7 +825,7 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Settings", (string)null);
+                    b.ToTable("Settings");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Variant", b =>
@@ -794,9 +866,14 @@ namespace eShop.EF.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_Variants_ProductId");
 
-                    b.ToTable("Variants", (string)null);
+                    b.HasIndex("SKU")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Variants_SKU");
+
+                    b.ToTable("Variants");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -858,17 +935,6 @@ namespace eShop.EF.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ParentCategory");
-                });
-
-            modelBuilder.Entity("eShop.Core.Models.Image", b =>
-                {
-                    b.HasOne("eShop.Core.Models.Product", "Product")
-                        .WithMany("Images")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Order", b =>
@@ -934,6 +1000,17 @@ namespace eShop.EF.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("eShop.Core.Models.ProductImage", b =>
+                {
+                    b.HasOne("eShop.Core.Models.Product", "Product")
+                        .WithMany("Images")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("eShop.Core.Models.Variant", b =>

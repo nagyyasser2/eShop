@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using eShop.Core.DTOs;
+using eShop.Core.DTOs.Category;
 using eShop.Core.Models;
 
 namespace eShop.Core.Mapper

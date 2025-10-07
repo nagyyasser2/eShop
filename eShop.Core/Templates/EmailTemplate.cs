@@ -164,5 +164,89 @@
                     </body>
                     </html>";
         }
+
+        public static string GetPasswordResetTemplate(string firstName, string resetLink)
+        {
+            return $@"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }}
+            .header {{
+                background-color: #4CAF50;
+                color: white;
+                padding: 20px;
+                text-align: center;
+            }}
+            .content {{
+                background-color: #f9f9f9;
+                padding: 30px;
+                border: 1px solid #ddd;
+            }}
+            .button {{
+                display: inline-block;
+                padding: 12px 30px;
+                background-color: #4CAF50;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                margin: 20px 0;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                color: #777;
+                font-size: 12px;
+            }}
+            .warning {{
+                background-color: #fff3cd;
+                border: 1px solid #ffc107;
+                padding: 15px;
+                border-radius: 5px;
+                margin: 20px 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h1>Password Reset Request</h1>
+            </div>
+            <div class='content'>
+                <h2>Hello {firstName},</h2>
+                <p>We received a request to reset your password for your eShop account.</p>
+                <p>Click the button below to reset your password:</p>
+                <center>
+                    <a href='{resetLink}' class='button'>Reset Password</a>
+                </center>
+                <div class='warning'>
+                    <strong>⚠️ Important:</strong>
+                    <ul>
+                        <li>This link will expire in 24 hours</li>
+                        <li>If you didn't request this password reset, please ignore this email</li>
+                        <li>Your password will remain unchanged until you create a new one</li>
+                    </ul>
+                </div>
+                <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                <p style='word-break: break-all; color: #0066cc;'>{resetLink}</p>
+            </div>
+            <div class='footer'>
+                <p>© 2024 eShop. All rights reserved.</p>
+                <p>This is an automated email, please do not reply.</p>
+            </div>
+        </div>
+    </body>
+    </html>";
+        }
     }
 }

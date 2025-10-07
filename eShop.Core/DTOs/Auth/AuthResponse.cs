@@ -12,5 +12,5 @@ namespace eShop.Core.DTOs.Auth
         public string RefreshToken { get; set; } = "";
         public UserResponse User { get; set; } = new UserResponse();
     }
-
+     
 }

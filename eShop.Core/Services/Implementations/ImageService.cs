@@ -1,117 +1,70 @@
-﻿using AutoMapper;
-using eShop.Core.DTOs;
-using eShop.Core.Services.Abstractions;
+﻿using eShop.Core.Services.Abstractions;
 using eShop.Core.Models;
+using eShop.Core.DTOs.Images;
+using AutoMapper;
 
 namespace eShop.Core.Services.Implementations
 {
-    public class ImageService : IImageService
+    public class ImageService(IUnitOfWork unitOfWork, IMapper mapper) : IImageService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public ImageService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<ImageDto> CreateImageAsync(CreateImageRequest imageDTO)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
-        }
+            var image = mapper.Map<CreateImageRequest, Image>(imageDTO);
 
-        public async Task<ImageDTO?> GetImageByIdAsync(int id)
-        {
-            var image = await _unitOfWork.ImageRepository.GetByIdAsync(id, new[] { "Product" });
-            return _mapper.Map<ImageDTO>(image);
-        }
+            image.IsAttached = true;
 
-        public async Task<IEnumerable<ImageDTO>> GetAllImagesAsync()
-        {
-            var images = await _unitOfWork.ImageRepository.GetAllAsync(new[] { "Product" });
-            return _mapper.Map<IEnumerable<ImageDTO>>(images);
-        }
+            var result = await unitOfWork.ImageRepository.AddAsync(image);
 
-        public async Task<IEnumerable<ImageDTO>> GetImagesByProductIdAsync(int productId)
-        {
-            var images = await _unitOfWork.ImageRepository.FindAllAsync(i => i.ProductId == productId, new[] { "Product" });
-            return _mapper.Map<IEnumerable<ImageDTO>>(images);
-        }
+            await unitOfWork.SaveChangesAsync();
 
-        public async Task<ImageDTO> CreateImageAsync(CreateImageDTO imageDto)
-        {
-            var image = _mapper.Map<Image>(imageDto);
-
-            // If setting as primary, ensure no other images are primary
-            if (image.IsPrimary)
-            {
-                await ResetPrimaryImagesForProduct(image.ProductId);
-            }
-
-            var createdImage = await _unitOfWork.ImageRepository.AddAsync(image);
-            await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<ImageDTO>(createdImage);
-        }
-
-        public async Task<ImageDTO?> UpdateImageAsync(UpdateImageDTO imageDto)
-        {
-            var existingImage = await _unitOfWork.ImageRepository.GetByIdAsync(imageDto.Id);
-            if (existingImage == null) return null;
-
-            _mapper.Map(imageDto, existingImage);
-
-            // If setting as primary, ensure no other images are primary
-            if (imageDto.IsPrimary.HasValue && imageDto.IsPrimary.Value)
-            {
-                await ResetPrimaryImagesForProduct(existingImage.ProductId);
-                existingImage.IsPrimary = true;
-            }
-
-            var updatedImage = _unitOfWork.ImageRepository.Update(existingImage);
-            await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<ImageDTO>(updatedImage);
+            return mapper.Map<Image, ImageDto>(result);
         }
 
         public async Task<bool> DeleteImageAsync(int id)
         {
-            var image = await _unitOfWork.ImageRepository.GetByIdAsync(id);
-            if (image == null) return false;
+            var image = await unitOfWork.ImageRepository.GetByIdAsync(id);
 
-            _unitOfWork.ImageRepository.Remove(image);
-            await _unitOfWork.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> SetAsPrimaryImageAsync(int id)
-        {
-            var image = await _unitOfWork.ImageRepository.GetByIdAsync(id);
-            if (image == null) return false;
-
-            await ResetPrimaryImagesForProduct(image.ProductId);
-
-            image.IsPrimary = true;
-            _unitOfWork.ImageRepository.Update(image);
-            await _unitOfWork.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> UpdateSortOrderAsync(int id, int sortOrder)
-        {
-            var image = await _unitOfWork.ImageRepository.GetByIdAsync(id);
-            if (image == null) return false;
-
-            image.SortOrder = sortOrder;
-            _unitOfWork.ImageRepository.Update(image);
-            await _unitOfWork.SaveChangesAsync();
-            return true;
-        }
-
-        private async Task ResetPrimaryImagesForProduct(int productId)
-        {
-            var primaryImages = await _unitOfWork.ImageRepository.FindAllAsync(i =>
-                i.ProductId == productId && i.IsPrimary);
-
-            foreach (var img in primaryImages)
+            if (image == null)
             {
-                img.IsPrimary = false;
-                _unitOfWork.ImageRepository.Update(img);
+                return false;
             }
+
+            unitOfWork.ImageRepository.Remove(image);
+
+            var changes = await unitOfWork.SaveChangesAsync();
+
+            return changes > 0;
+        }
+
+        public async Task<ImageDto?> GetImageByIdAsync(int id)
+        {
+            var image = await unitOfWork.ImageRepository.GetByIdAsync(id);
+
+            if (image == null)
+            {
+                return null;
+            }
+
+            return mapper.Map<Image, ImageDto>(image);
+        }
+
+        public async Task<ImageDto?> SetAsPrimaryImageAsync(int id)
+        {
+            var imageToSetPrimary = await unitOfWork.ImageRepository.GetByIdAsync(id);
+            if (imageToSetPrimary == null)
+            {
+                return null;
+            }
+
+            if (!imageToSetPrimary.IsPrimary)
+            {
+                imageToSetPrimary.IsPrimary = true;
+                unitOfWork.ImageRepository.Update(imageToSetPrimary);
+            }
+
+            await unitOfWork.SaveChangesAsync();
+
+            return mapper.Map<Image, ImageDto>(imageToSetPrimary);
         }
     }
 }

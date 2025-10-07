@@ -1,15 +1,14 @@
 ﻿using eShop.Core.DTOs;
 using eShop.Core.DTOs.Payments;
 using eShop.Core.Models;
-using Stripe;
 using Stripe.Checkout;
 
 namespace eShop.Core.Services.Abstractions
 {
     public interface IPaymentService
     {
-        Task<PaymentDto> CreatePaymentAsync(CreatePaymentDto paymentDto);
-        Task<Session> CreateCheckoutSessionAsync(CreateCheckoutSessionDto checkoutDto);
+        Task<PaymentDto> CreatePaymentAsync(CreatePaymentRequest paymentDto);
+        Task<Session> CreateCheckoutSessionAsync(CreateCheckoutSessionRequest checkoutDto);
         Task<PaymentDto> RefundPaymentAsync(RefundPaymentDto refundDto);
         Task<bool> HandleStripeWebhookAsync(string payload, string signature);
         Task<PaymentDto?> GetPaymentByIdAsync(int paymentId);

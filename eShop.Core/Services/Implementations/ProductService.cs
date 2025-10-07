@@ -1,133 +1,141 @@
-﻿using AutoMapper;
-using eShop.Core.DTOs;
-using eShop.Core.Models;
-using eShop.Core.Services.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using eShop.Core.Services.Abstractions;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+using eShop.Core.Models;
+using eShop.Core.DTOs.Products;
+using AutoMapper;
 
 namespace eShop.Core.Services.Implementations
 {
-    public class ProductService : IProductService
+    public class ProductService(IUnitOfWork unitOfWork, IFileService fileService, IMapper mapper) : IProductService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        private readonly IFileService _fileService;
-
-        public ProductService(IUnitOfWork unitOfWork, IMapper mapper, IFileService fileService)
+        public async Task<ProductDto?> GetProductByIdAsync(int id)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
-            _fileService = fileService;
+            // Define the navigation properties to eagerly load
+            string[] includes = new string[] { "Images", "Category" };
+
+            // Pass the includes array to GetByIdAsync
+            var product = await unitOfWork.ProductRepository.GetByIdAsync(id, includes);
+
+            // Check if the product was found before mapping
+            if (product == null)
+            {
+                return null;
+            }
+
+            return mapper.Map<ProductDto>(product);
         }
 
-        public async Task<ProductDTO?> GetProductByIdAsync(int id)
-        {
-            var product = await _unitOfWork.ProductRepository.GetByIdAsync(id, new[] { "Category", "Images", "Variants" });
-            return _mapper.Map<ProductDTO>(product);
-        }
-
-        public async Task<(IEnumerable<ProductDTO> Products, int TotalCount)> GetFilteredPagedAsync(
+        public async Task<(IEnumerable<ProductDto> Products, int TotalCount)> GetFilteredPagedAsync(
             Expression<Func<Product, bool>> filter,
             int skip,
             int take,
             string[]? includes = null)
         {
-            // Default includes if none provided
             includes ??= new[] { "Category", "Images", "Variants" };
 
-            // Get filtered and paginated products
-            var products = await _unitOfWork.ProductRepository.GetFilteredPagedAsync(filter, skip, take, includes);
+            var products = await unitOfWork.ProductRepository.GetFilteredPagedAsync(filter, skip, take, includes);
 
-            // Get total count for pagination
-            var totalCount = await _unitOfWork.ProductRepository.CountAsync(filter);
+            var totalCount = await unitOfWork.ProductRepository.CountAsync(filter);
 
-            // Map to DTOs
-            var productDtos = _mapper.Map<IEnumerable<ProductDTO>>(products);
+            var productDTOs = mapper.Map<IEnumerable<ProductDto>>(products);
 
-            return (productDtos, totalCount);
+            return (productDTOs, totalCount);
         }
 
-        public async Task<ProductDTO> CreateProductAsync(CreateProductDto productDto)
+        public async Task<ProductDto?> CreateProductAsync(CreateProductRequest createProductDto)
         {
-            var product = _mapper.Map<Product>(productDto);
-            var createdProduct = await _unitOfWork.ProductRepository.AddAsync(product);
-            await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<ProductDTO>(createdProduct);
+            using var transaction = unitOfWork.BeginTransaction();
+
+            try
+            {
+                var product = mapper.Map<Product>(createProductDto);
+
+                var createdProduct = await unitOfWork.ProductRepository.AddAsync(product);
+
+                await unitOfWork.SaveChangesAsync();
+
+                await unitOfWork.CommitTransactionAsync();
+
+                return mapper.Map<ProductDto>(createdProduct);
+            }
+            catch (Exception)
+            {
+                await unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        public async Task<ProductDTO?> UpdateProductAsync(UpdateProductDto productDto)
+        public async Task<ProductDto?> UpdateProductAsync(UpdateProductRequest productDto)
         {
-            var existingProduct = await _unitOfWork.ProductRepository.GetByIdAsync(productDto.Id);
+            var existingProduct = await unitOfWork.ProductRepository.GetByIdAsync(productDto.Id);
             if (existingProduct == null) return null;
 
-            _mapper.Map(productDto, existingProduct);
-            var updatedProduct = _unitOfWork.ProductRepository.Update(existingProduct);
-            await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<ProductDTO>(updatedProduct);
+            mapper.Map(productDto, existingProduct);
+
+            var updatedProduct = unitOfWork.ProductRepository.Update(existingProduct);
+            await unitOfWork.SaveChangesAsync();
+
+            return mapper.Map<ProductDto>(updatedProduct);
         }
 
         public async Task<bool> DeleteProductAsync(int id)
         {
-            var product = await _unitOfWork.ProductRepository.GetByIdAsync(id, new[] { "Images" });
+            var product = await unitOfWork.ProductRepository.GetByIdAsync(id, new[] { "Images" });
+
             if (product == null) return false;
 
-            // Delete associated image files
-            foreach (var image in product.Images)
+            foreach (var productImage in product.Images)
             {
-                await _fileService.DeleteFileAsync(image.Url);
+                await fileService.DeleteFileAsync(productImage.Path);
             }
 
-            _unitOfWork.ProductRepository.Remove(product);
-            await _unitOfWork.SaveChangesAsync();
-            return true;
+            unitOfWork.ProductRepository.Remove(product);
+
+            return await unitOfWork.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> ToggleProductStatusAsync(int id)
         {
-            var product = await _unitOfWork.ProductRepository.GetByIdAsync(id);
+            var product = await unitOfWork.ProductRepository.GetByIdAsync(id);
             if (product == null) return false;
 
             product.IsActive = !product.IsActive;
-            _unitOfWork.ProductRepository.Update(product);
-            await _unitOfWork.SaveChangesAsync();
+            unitOfWork.ProductRepository.Update(product);
+            await unitOfWork.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> ToggleFeaturedStatusAsync(int id)
         {
-            var product = await _unitOfWork.ProductRepository.GetByIdAsync(id);
+            var product = await unitOfWork.ProductRepository.GetByIdAsync(id);
             if (product == null) return false;
 
             product.IsFeatured = !product.IsFeatured;
-            _unitOfWork.ProductRepository.Update(product);
-            await _unitOfWork.SaveChangesAsync();
+            unitOfWork.ProductRepository.Update(product);
+            await unitOfWork.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> UpdateStockQuantityAsync(int id, int quantity)
         {
-            var product = await _unitOfWork.ProductRepository.GetByIdAsync(id);
+            var product = await unitOfWork.ProductRepository.GetByIdAsync(id);
             if (product == null) return false;
 
             product.StockQuantity = quantity;
-            _unitOfWork.ProductRepository.Update(product);
-            await _unitOfWork.SaveChangesAsync();
+            unitOfWork.ProductRepository.Update(product);
+            await unitOfWork.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> ProductExistsAsync(int id)
         {
-            var product = await _unitOfWork.ProductRepository.GetByIdAsync(id);
+            var product = await unitOfWork.ProductRepository.GetByIdAsync(id);
             return product != null;
         }
 
         public async Task<bool> ProductExistsBySKUAsync(string sku, int? excludeProductId = null)
         {
-            var products = await _unitOfWork.ProductRepository.FindAllAsync(p => p.SKU == sku);
+            var products = await unitOfWork.ProductRepository.FindAllAsync(p => p.SKU == sku);
             if (excludeProductId.HasValue)
             {
                 products = products.Where(p => p.Id != excludeProductId.Value);

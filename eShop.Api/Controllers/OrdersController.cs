@@ -5,18 +5,17 @@ using Microsoft.AspNetCore.Mvc;
 using eShop.Core.DTOs.Orders;
 using System.Security.Claims;
 using eShop.Core.Enums;
-using eShop.Core.DTOs;
 using AutoMapper;
+using Hangfire;
 
 namespace eShop.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class OrdersController(IOrderService orderService, IEmailSender emailSender, IMapper mapper) : ControllerBase
+    public class OrdersController(IOrderService orderService, IMapper mapper) : ControllerBase
     {
         private readonly IOrderService _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
-        private readonly IEmailSender _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
         private readonly IMapper _mapper = mapper ?? throw new ArgumentException(nameof(mapper));
 
         [HttpGet]
@@ -34,7 +33,7 @@ namespace eShop.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var isAdmin = User.IsInRole("Admin");
 
-            if(id.ToString() != userId && !isAdmin)
+            if (id.ToString() != userId && !isAdmin)
             {
                 return Unauthorized();
             }
@@ -68,7 +67,6 @@ namespace eShop.Api.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var isAdmin = User.IsInRole("Admin");
 
             if (userId == null || userEmail == null)
             {
@@ -81,7 +79,9 @@ namespace eShop.Api.Controllers
 
             var emailContent = OrderEmailTemplate.GenerateOrderConfirmationEmail(createdOrder);
 
-            await _emailSender.SendEmailAsync(userEmail, "Your eShop Order Confirmation", emailContent);
+            // Enqueue email to be sent in background
+            BackgroundJob.Enqueue<IEmailSender>(emailSender =>
+                emailSender.SendEmailAsync(userEmail, "Your eShop Order Confirmation", emailContent));
 
             return CreatedAtAction(nameof(GetOrderById), new { id = createdOrder.Id }, createdOrder);
         }
@@ -140,7 +140,9 @@ namespace eShop.Api.Controllers
                         subject = $"💳 Payment Status Updated for Order #{updatedOrderDto.OrderNumber}";
                     }
 
-                    await _emailSender.SendEmailAsync(userEmail, subject, emailContent);
+                    // Enqueue email in background
+                    BackgroundJob.Enqueue<IEmailSender>(emailSender =>
+                        emailSender.SendEmailAsync(userEmail, subject, emailContent));
                 }
             }
 
@@ -148,7 +150,7 @@ namespace eShop.Api.Controllers
         }
 
         [HttpPatch("{id}/cancel")]
-        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelOrderRequestDto? request = null)
+        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelOrderRequest? request = null)
         {
             var currentOrder = await _orderService.GetOrderByIdAsync(id);
             if (currentOrder == null)
@@ -171,7 +173,10 @@ namespace eShop.Api.Controllers
             {
                 var emailContent = OrderEmailTemplate.GenerateOrderCancellationEmail(cancelledOrder, request?.Reason);
                 var subject = $"Order #{cancelledOrder.OrderNumber} Cancellation Confirmation";
-                await _emailSender.SendEmailAsync(userEmail, subject, emailContent);
+
+                // Enqueue email in background
+                BackgroundJob.Enqueue<IEmailSender>(emailSender =>
+                    emailSender.SendEmailAsync(userEmail, subject, emailContent));
             }
 
             return Ok(new
@@ -195,7 +200,7 @@ namespace eShop.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles ="Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
             var deleted = await _orderService.DeleteOrderAsync(id);

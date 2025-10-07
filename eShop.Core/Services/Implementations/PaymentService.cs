@@ -29,7 +29,7 @@ namespace eShop.Core.Services.Implementations
         private readonly IUnitOfWork _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         private readonly IMapper _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 
-        public async Task<PaymentDto> CreatePaymentAsync(CreatePaymentDto paymentDto)
+        public async Task<PaymentDto> CreatePaymentAsync(CreatePaymentRequest paymentDto)
         {
             try
             {
@@ -60,7 +60,7 @@ namespace eShop.Core.Services.Implementations
             }
         }
 
-        public async Task<Session> CreateCheckoutSessionAsync(CreateCheckoutSessionDto checkoutDto)
+        public async Task<Session> CreateCheckoutSessionAsync(CreateCheckoutSessionRequest checkoutDto)
         {
             try
             {

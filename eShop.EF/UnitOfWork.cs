@@ -17,6 +17,7 @@ namespace eShop.Core.Services.Implementations
         private readonly IBaseRepository<Order> _orderRepository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IBaseRepository<Image> _imageRepository;
+        private readonly IBaseRepository<ProductImage> _productImageRepository;
         private readonly DbContext _context;
 
         private bool _disposed = false;
@@ -32,8 +33,10 @@ namespace eShop.Core.Services.Implementations
             _categoryRepository = new CategoriesRepository(context);
             _orderRepository = new BaseRepository<Order>(context);
             _imageRepository = new BaseRepository<Image>(context);
+            _productImageRepository = new BaseRepository<ProductImage>(context);
         }
 
+        public IBaseRepository<ProductImage> ProductImageRepository => _productImageRepository;
         public IBaseRepository<OrderItem> OrderItemRepository => _orderItemRepository;
         public IBaseRepository<Variant> VariantRepository => _variantRepository;
         public IBaseRepository<Product> ProductRepository => _productRepository;

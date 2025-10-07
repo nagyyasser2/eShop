@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using eShop.Core.DTOs;
+using eShop.Core.DTOs.Variants;
 using eShop.Core.Models;
 using eShop.Core.Services.Abstractions;
 
@@ -16,27 +16,27 @@ namespace eShop.Core.Services.Implementations
             _mapper = mapper;
         }
 
-        public async Task<VariantDTO?> GetVariantByIdAsync(int id)
+        public async Task<VariantDto?> GetVariantByIdAsync(int id)
         {
             var variant = await _unitOfWork.VariantRepository.GetByIdAsync(id, new[] { "Product" });
-            return _mapper.Map<VariantDTO>(variant);
+            return _mapper.Map<VariantDto>(variant);
         }
 
-        public async Task<IEnumerable<VariantDTO>> GetVariantsByProductIdAsync(int productId)
+        public async Task<IEnumerable<VariantDto>> GetVariantsByProductIdAsync(int productId)
         {
             var variants = await _unitOfWork.VariantRepository.FindAllAsync(v => v.ProductId == productId, new[] { "Product" });
-            return _mapper.Map<IEnumerable<VariantDTO>>(variants);
+            return _mapper.Map<IEnumerable<VariantDto>>(variants);
         }
 
-        public async Task<VariantDTO> CreateVariantAsync(CreateVariantDTO variantDto)
+        public async Task<VariantDto> CreateVariantAsync(CreateVariantRequest variantDto)
         {
             var variant = _mapper.Map<Variant>(variantDto);
             var createdVariant = await _unitOfWork.VariantRepository.AddAsync(variant);
             await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<VariantDTO>(createdVariant);
+            return _mapper.Map<VariantDto>(createdVariant);
         }
 
-        public async Task<VariantDTO?> UpdateVariantAsync(UpdateVariantDTO variantDto)
+        public async Task<VariantDto?> UpdateVariantAsync(UpdateVariantRequest variantDto)
         {
             var existingVariant = await _unitOfWork.VariantRepository.GetByIdAsync(variantDto.Id);
             if (existingVariant == null) return null;
@@ -44,7 +44,7 @@ namespace eShop.Core.Services.Implementations
             _mapper.Map(variantDto, existingVariant);
             var updatedVariant = _unitOfWork.VariantRepository.Update(existingVariant);
             await _unitOfWork.SaveChangesAsync();
-            return _mapper.Map<VariantDTO>(updatedVariant);
+            return _mapper.Map<VariantDto>(updatedVariant);
         }
 
         public async Task<bool> DeleteVariantAsync(int id)
