@@ -171,7 +171,7 @@ namespace eShop.Core.Services.Implementations
                 orderItem.UnitPrice = product.Price;
                 orderItem.TotalPrice = orderItem.Quantity * product.Price;
                 orderItem.ProductName = product.Name;
-                orderItem.ProductSKU = product.SKU;
+                orderItem.ProductSku = product.Sku;
 
                 orderItemEntities.Add(orderItem);
             }

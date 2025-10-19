@@ -4,12 +4,28 @@ using AutoMapper;
 
 namespace eShop.Core.MappingProfiles
 {
-    public class ProductProfile: Profile
+    public class ProductProfile : Profile
     {
         public ProductProfile()
         {
-            CreateMap<Product, CreateProductRequest>().ReverseMap();
-            CreateMap<CreateProductImageDto, ProductImage>();
+            // Create → Entity
+            CreateMap<CreateProductRequest, Product>().ReverseMap();
+
+            // Update → Entity (exclude ProductImages since we handle it manually)
+            CreateMap<UpdateProductRequest, Product>()
+                .ForMember(dest => dest.ProductImages, opt => opt.Ignore())
+                .ReverseMap();
+
+            // Image mappings
+            CreateMap<CreateProductImageRequest, ProductImage>();
+            CreateMap<UpdateProductImageRequest, ProductImage>(); // Add this line
+            CreateMap<CreateProductImageDto, ProductImage>(); // Add if needed
+
+            // Entity → DTO
+            CreateMap<Product, ProductDto>();
+
+            // Map for images
+            CreateMap<ProductImage, ProductImageDto>();
         }
     }
 }

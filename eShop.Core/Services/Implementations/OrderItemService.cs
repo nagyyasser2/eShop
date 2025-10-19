@@ -28,7 +28,7 @@ namespace eShop.Core.Services.Implementations
                 orderItem.UnitPrice = product.Price;
                 orderItem.TotalPrice = orderItem.Quantity * product.Price;
                 orderItem.ProductName = product.Name;
-                orderItem.ProductSKU = product.SKU;
+                orderItem.ProductSku = product.Sku;
 
                 var createdOrderItem = await _unitOfWork.OrderItemRepository.AddAsync(orderItem);
 
@@ -87,7 +87,7 @@ namespace eShop.Core.Services.Implementations
                     orderItem.UnitPrice = product.Price;
                     orderItem.TotalPrice = orderItem.Quantity * product.Price;
                     orderItem.ProductName = product.Name;
-                    orderItem.ProductSKU = product.SKU;
+                    orderItem.ProductSku = product.Sku;
 
                     createdItems.Add(orderItem);
                 }

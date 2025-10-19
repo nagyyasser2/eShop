@@ -3,11 +3,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace eShop.Core.DTOs.Products
 {
-    public class CreateProductImageDto
+    public class CreateProductImageRequest
     {
         [Required]
         public IFormFile File { get; set; }
+
         public bool IsPrimary { get; set; }
-        public int ProductId { get; set; }
     }
 }

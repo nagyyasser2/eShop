@@ -26,7 +26,7 @@ namespace eShop.EF
                     .OnDelete(DeleteBehavior.SetNull);
 
                 // Single Column Indexes
-                entity.HasIndex(p => p.SKU)
+                entity.HasIndex(p => p.Sku)
                     .IsUnique()
                     .HasDatabaseName("IX_Products_SKU");
 

@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace eShop.Core.DTOs.Products
 {
-    class RefundPaymentDto
+    public class DeleteProductImageDto
     {
+        public int Id { get; set; }
+        public string Path { get; set; }
     }
 }

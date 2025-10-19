@@ -16,7 +16,7 @@ namespace eShop.Core.Services.Implementations
                 throw new ArgumentException("No file provided or file is empty.");
             }
 
-            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif",".webp",".avif" };
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
             if (!allowedExtensions.Contains(extension))
             {

@@ -9,7 +9,7 @@ namespace eShop.Core.DTOs.Orders
         public decimal? UnitPrice { get; set; }
         public decimal? TotalPrice { get; set; }
         public string? ProductName { get; set; }
-        public string? ProductSKU { get; set; }
+        public string? ProductSku { get; set; }
         public int OrderId { get; set; }
         public int ProductId { get; set; } 
         public int? ProductVariantId { get; set; }
@@ -34,7 +34,7 @@ namespace eShop.Core.DTOs.Orders
         public decimal UnitPrice { get; set; }
         public decimal TotalPrice { get; set; }
         public string ProductName { get; set; }
-        public string? ProductSKU { get; set; }
+        public string? ProductSku { get; set; }
         public int OrderId { get; set; }
         public int ProductId { get; set; }
         public int? ProductVariantId { get; set; }

@@ -11,7 +11,7 @@ namespace eShop.Core.Models
         public string? Description { get; set; } = string.Empty;
         public string? ShortDescription { get; set; }
         [Required, MaxLength(100)]
-        public string SKU { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
         [Column(TypeName = "decimal(18,2)")]
@@ -29,6 +29,6 @@ namespace eShop.Core.Models
         // Navigation Properties
         public virtual Category? Category { get; set; }
         public virtual ICollection<Variant> Variants { get; set; } = new List<Variant>();
-        public virtual ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
+        public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
     }
 }

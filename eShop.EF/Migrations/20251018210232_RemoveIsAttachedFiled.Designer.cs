@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eShop.EF;
 
@@ -11,9 +12,11 @@ using eShop.EF;
 namespace eShop.EF.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251018210232_RemoveIsAttachedFiled")]
+    partial class RemoveIsAttachedFiled
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -519,7 +522,7 @@ namespace eShop.EF.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ProductSku")
+                    b.Property<string>("ProductSKU")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("ProductVariantId")
@@ -705,13 +708,13 @@ namespace eShop.EF.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("ShortDescription")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Sku")
+                    b.Property<string>("SKU")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShortDescription")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("StockQuantity")
                         .HasColumnType("int");
@@ -742,7 +745,7 @@ namespace eShop.EF.Migrations
                     b.HasIndex("Price")
                         .HasDatabaseName("IX_Products_Price");
 
-                    b.HasIndex("Sku")
+                    b.HasIndex("SKU")
                         .IsUnique()
                         .HasDatabaseName("IX_Products_SKU");
 

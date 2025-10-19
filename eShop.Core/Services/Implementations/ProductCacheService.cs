@@ -1,28 +1,20 @@
-﻿using eShop.Core.Services.Abstractions;
-using Microsoft.Extensions.Caching.Distributed;
+﻿using Microsoft.Extensions.Caching.Distributed;
+using eShop.Core.Services.Abstractions;
 using System.Text.Json;
 
 namespace eShop.Core.Services.Implementations
 {
-    public class ProductCacheService : IProductCacheService
+    public class ProductCacheService(IDistributedCache cache) : IProductCacheService
     {
-        private readonly IDistributedCache _cache;
-
-        // Cache key constants
         private const string PRODUCT_LIST_CACHE_PREFIX = "products:list:";
         private const string PRODUCT_DETAIL_CACHE_PREFIX = "products:detail:";
         private const string PRODUCT_CACHE_KEYS_SET = "products:cache-keys";
-
-        public ProductCacheService(IDistributedCache cache)
-        {
-            _cache = cache;
-        }
 
         public async Task<T?> GetAsync<T>(string key)
         {
             try
             {
-                var cachedData = await _cache.GetStringAsync(key);
+                var cachedData = await cache.GetStringAsync(key);
 
                 if (string.IsNullOrEmpty(cachedData))
                 {
@@ -33,7 +25,6 @@ namespace eShop.Core.Services.Implementations
             }
             catch (Exception)
             {
-                // Log the exception in production
                 return default;
             }
         }
@@ -52,13 +43,11 @@ namespace eShop.Core.Services.Implementations
                 }
                 else
                 {
-                    // Default expiration: 5 minutes
                     options.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
                 }
 
-                await _cache.SetStringAsync(key, serializedData, options);
+                await cache.SetStringAsync(key, serializedData, options);
 
-                // Track list cache keys for bulk invalidation
                 if (key.StartsWith(PRODUCT_LIST_CACHE_PREFIX))
                 {
                     await TrackCacheKeyAsync(key);
@@ -76,7 +65,7 @@ namespace eShop.Core.Services.Implementations
             try
             {
                 var cacheKey = $"{PRODUCT_DETAIL_CACHE_PREFIX}{productId}";
-                await _cache.RemoveAsync(cacheKey);
+                await cache.RemoveAsync(cacheKey);
             }
             catch (Exception)
             {
@@ -89,7 +78,7 @@ namespace eShop.Core.Services.Implementations
             try
             {
                 // Get all tracked cache keys
-                var keysData = await _cache.GetStringAsync(PRODUCT_CACHE_KEYS_SET);
+                var keysData = await cache.GetStringAsync(PRODUCT_CACHE_KEYS_SET);
 
                 if (!string.IsNullOrEmpty(keysData))
                 {
@@ -98,13 +87,13 @@ namespace eShop.Core.Services.Implementations
                     if (keys != null && keys.Any())
                     {
                         // Remove all list cache entries
-                        var tasks = keys.Select(key => _cache.RemoveAsync(key));
+                        var tasks = keys.Select(key => cache.RemoveAsync(key));
                         await Task.WhenAll(tasks);
                     }
                 }
 
                 // Clear the tracking set
-                await _cache.RemoveAsync(PRODUCT_CACHE_KEYS_SET);
+                await cache.RemoveAsync(PRODUCT_CACHE_KEYS_SET);
             }
             catch (Exception)
             {
@@ -116,7 +105,7 @@ namespace eShop.Core.Services.Implementations
         {
             try
             {
-                var keysData = await _cache.GetStringAsync(PRODUCT_CACHE_KEYS_SET);
+                var keysData = await cache.GetStringAsync(PRODUCT_CACHE_KEYS_SET);
 
                 var keys = string.IsNullOrEmpty(keysData)
                     ? new HashSet<string>()
@@ -130,7 +119,7 @@ namespace eShop.Core.Services.Implementations
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
                 };
 
-                await _cache.SetStringAsync(PRODUCT_CACHE_KEYS_SET, serializedKeys, options);
+                await cache.SetStringAsync(PRODUCT_CACHE_KEYS_SET, serializedKeys, options);
             }
             catch (Exception)
             {

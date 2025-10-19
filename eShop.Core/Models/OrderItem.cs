@@ -12,7 +12,7 @@ namespace eShop.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; }
         public string ProductName { get; set; } 
-        public string? ProductSKU { get; set; }
+        public string? ProductSku { get; set; }
 
         // Foreign Keys
         public int OrderId { get; set; }

@@ -8,8 +8,8 @@ namespace eShop.Core.Services.Abstractions
     {
         Task<ProductDto?> GetProductByIdAsync(int id);
         Task<ProductDto?> CreateProductAsync(CreateProductRequest createProductDto);
-        Task<ProductDto?> UpdateProductAsync(UpdateProductRequest productDto);
-        Task<bool> DeleteProductAsync(int id);
+        Task<ProductDto?> UpdateProductAsync(int id,UpdateProductRequest productDto);
+        Task DeleteProductAsync(int id);
         Task<(IEnumerable<ProductDto> Products, int TotalCount)> GetFilteredPagedAsync(
             Expression<Func<Product, bool>> filter,
             int skip,

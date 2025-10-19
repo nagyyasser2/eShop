@@ -19,7 +19,6 @@ namespace eShop.Core.Services.Implementations
         private readonly IBaseRepository<Image> _imageRepository;
         private readonly IBaseRepository<ProductImage> _productImageRepository;
         private readonly DbContext _context;
-
         private bool _disposed = false;
 
         public UnitOfWork(ApplicationDbContext context)
@@ -51,6 +50,11 @@ namespace eShop.Core.Services.Implementations
             return _context.Database.BeginTransaction();
         }
 
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
+        }
+
         public async Task CommitTransactionAsync()
         {
             await _context.Database.CommitTransactionAsync();
@@ -60,6 +64,7 @@ namespace eShop.Core.Services.Implementations
         {
             await _context.Database.RollbackTransactionAsync();
         }
+
         public int SaveChanges()
         {
             return _context.SaveChanges();

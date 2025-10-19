@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace eShop.Core.DTOs.Products
+﻿namespace eShop.Core.DTOs.Products
 {
-    public class UpdateProductRequest: CreateProductRequest
+    public class UpdateProductRequest: ProductDto
     {
-        public int Id { get; set; }
+        public ICollection<UpdateProductImageRequest> ProductImages { get; set; }
     }
 }
