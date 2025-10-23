@@ -19,10 +19,8 @@ namespace eShop.Core.Services.Implementations
 
             return await ExecuteInTransactionAsync(async () =>
             {
-                // 1. Create order entity (with initial totals as 0)
                 var order = await CreateOrderEntityAsync(orderDto);
 
-                // 2. Create order items
                 await CreateOrderItemsDirectAsync(order, orderDto.OrderItems);
 
                 // 3. Update stock quantities
@@ -67,17 +65,6 @@ namespace eShop.Core.Services.Implementations
 
                 return _mapper.Map<OrderDto>(order);
             });
-        }
-
-        public async Task UpdateOrderTotalsAsync(int orderId)
-        {
-            var order = await GetValidatedOrderAsync(orderId, new[] { nameof(Order.OrderItems) });
-            await UpdateOrderTotalsDirectAsync(order);
-        }
-
-        public async Task RecalculateOrderTotalsAsync(int orderId)
-        {
-            await UpdateOrderTotalsAsync(orderId);
         }
 
         public async Task<Order?> GetOrderByIdAsync(int orderId)
@@ -127,7 +114,6 @@ namespace eShop.Core.Services.Implementations
             {
                 var order = await GetValidatedOrderAsync(orderId, new[] { nameof(Order.OrderItems) });
 
-                // Restore stock quantities
                 await RestoreStockQuantitiesAsync(order.OrderItems);
 
                 await _unitOfWork.OrderRepository.RemoveByIdAsync(orderId);
@@ -135,8 +121,6 @@ namespace eShop.Core.Services.Implementations
                 return true;
             });
         }
-
-        #region Private Methods
 
         private async Task<Order> CreateOrderEntityAsync(CreateOrderDto orderDto)
         {
@@ -180,7 +164,5 @@ namespace eShop.Core.Services.Implementations
             await _unitOfWork.OrderItemRepository.AddRangeAsync(orderItemEntities);
             await _unitOfWork.SaveChangesAsync();
         }
-
-        #endregion
     }
 }

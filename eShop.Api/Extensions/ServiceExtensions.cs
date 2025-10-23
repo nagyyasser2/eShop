@@ -44,10 +44,12 @@ public static class ServiceExtensions
     {
         services.AddScoped<IProductService, eShop.Core.Services.Implementations.ProductService>();
         services.AddScoped<IFileService, eShop.Core.Services.Implementations.FileService>();
-        services.AddScoped<IProductCacheService, ProductCacheService>();
         services.AddScoped<IOrderItemService, OrderItemService>();
+        services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IVariantService, VariantService>();
         services.AddScoped<IPaymentService, PaymentService>();
+        services.AddSingleton<ICacheService, CacheService>();
+        services.AddScoped<CacheInvalidationHelper>();
         services.AddScoped<IStripeService, StripeService>();
         services.AddSingleton<IEmailSender, EmailSender>();
         services.AddScoped<IOrderService, OrderService>();

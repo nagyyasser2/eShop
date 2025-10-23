@@ -181,7 +181,6 @@ namespace eShop.Core.Services.Base
         #endregion
 
         #region Transaction Helpers
-
         protected async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> operation)
         {
             await using var transaction = _unitOfWork.BeginTransaction();
@@ -190,21 +189,6 @@ namespace eShop.Core.Services.Base
                 var result = await operation();
                 await transaction.CommitAsync();
                 return result;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
-
-        protected async Task ExecuteInTransactionAsync(Func<Task> operation)
-        {
-            await using var transaction = _unitOfWork.BeginTransaction();
-            try
-            {
-                await operation();
-                await transaction.CommitAsync();
             }
             catch
             {

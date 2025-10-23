@@ -9,6 +9,7 @@ namespace eShop.Core.Services.Implementations
 {
     public class UnitOfWork : IUnitOfWork
     {
+        private readonly IBaseRepository<ProductImage> _productImageRepository;
         private readonly IBaseRepository<OrderItem> _orderItemRepository;
         private readonly IBaseRepository<Product> _productRepository;
         private readonly IBaseRepository<Variant> _variantRepository;
@@ -17,7 +18,6 @@ namespace eShop.Core.Services.Implementations
         private readonly IBaseRepository<Order> _orderRepository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IBaseRepository<Image> _imageRepository;
-        private readonly IBaseRepository<ProductImage> _productImageRepository;
         private readonly DbContext _context;
         private bool _disposed = false;
 

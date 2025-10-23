@@ -1,4 +1,5 @@
-﻿using eShop.Core.Models;
+﻿using eShop.Core.DTOs.Category;
+using eShop.Core.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace eShop.Core.DTOs.Products
@@ -27,5 +28,6 @@ namespace eShop.Core.DTOs.Products
         public string? Tags { get; set; }
         public int CategoryId { get; set; }
         public List<ProductImageDto> ProductImages { get; set; }
+        public CategoryDto Category { get; set; }
     }
 }

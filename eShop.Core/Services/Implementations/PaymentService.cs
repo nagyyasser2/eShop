@@ -117,7 +117,7 @@ namespace eShop.Core.Services.Implementations
                     TransactionId = GenerateTransactionId(),
                     Amount = order.TotalAmount,
                     OrderId = checkoutDto.OrderId,
-                    PaymentMethodId = 1, // Default Stripe payment method ID
+                    PaymentMethodId = 2, // Default Stripe payment method ID
                     Status = PaymentStatus.Pending,
                     Gateway = "Stripe",
                     GatewayTransactionId = session.Id,

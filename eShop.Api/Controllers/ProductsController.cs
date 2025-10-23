@@ -1,14 +1,12 @@
 ﻿using eShop.Core.Services.Abstractions;
 using eShop.Core.DTOs.Products;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq.Expressions;
-using eShop.Core.Models;
 
 namespace eShop.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductsController(IProductService productService): ControllerBase
+    public class ProductsController(IProductService productService) : ControllerBase
     {
         [HttpPost]
         [Consumes("multipart/form-data")]
@@ -32,7 +30,7 @@ namespace eShop.Api.Controllers
             }
 
             await productService.UpdateProductAsync(id, updateProductRequest);
-            return Ok(new { message = "Product deleted successfully." });
+            return Ok(new { message = "Product updated successfully." });
         }
 
         [HttpDelete("{id}")]
@@ -57,32 +55,41 @@ namespace eShop.Api.Controllers
 
         [HttpGet]
         public async Task<IActionResult> Get(
-        [FromQuery] string[]? tags,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10,
-        [FromQuery] bool? featured = null,
-        [FromQuery] bool? active = null,
-        [FromQuery] int? categoryId = null,
-        [FromQuery] decimal? minPrice = null,
-        [FromQuery] decimal? maxPrice = null,
-        [FromQuery] int? daysBack = null) 
+            [FromQuery] string[]? tags,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] bool? featured = null,
+            [FromQuery] bool? active = null,
+            [FromQuery] int? categoryId = null,
+            [FromQuery] decimal? minPrice = null,
+            [FromQuery] decimal? maxPrice = null,
+            [FromQuery] int? daysBack = null)
         {
-            try
-            {
-                if (page < 1) page = 1;
-                if (pageSize < 1) pageSize = 10;
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
 
-                int skip = (page - 1) * pageSize;
-                Expression<Func<Product, bool>> filter = p => true;
+            int skip = (page - 1) * pageSize;
 
-                var (products, totalCount) = await productService.GetFilteredPagedAsync(filter, skip, pageSize);
-                var result = new { data = products, count = totalCount, page, pageSize };
-                return Ok(result);
-            }
-            catch (Exception ex)
+            var (products, totalCount) = await productService.GetFilteredPagedAsync(
+                skip,
+                pageSize,
+                featured,
+                active,
+                categoryId,
+                minPrice,
+                maxPrice,
+                daysBack,
+                tags);
+
+            var result = new
             {
-                return StatusCode(500, new { message = "An error occurred while retrieving products.", error = ex.Message });
-            }
+                data = products,
+                count = totalCount,
+                page,
+                pageSize
+            };
+
+            return Ok(result);
         }
     }
 }
