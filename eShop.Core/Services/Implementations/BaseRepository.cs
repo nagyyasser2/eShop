@@ -19,7 +19,6 @@ namespace eShop.Core.Services.Implementations
             _dbSet = context.Set<T>();
         }
 
-        // Read Operations
         public T? GetById(int id, string[]? includes = null)
         {
             IQueryable<T> query = _dbSet;
@@ -33,10 +32,9 @@ namespace eShop.Core.Services.Implementations
             return query.FirstOrDefault(e => EF.Property<int>(e, "Id") == id);
         }
 
-        // Option 1: Use AsNoTracking + tell EF not to fix up navigation properties
         public async Task<T?> GetByIdAsync(int id, string[]? includes = null)
         {
-            IQueryable<T> query = _dbSet.AsNoTracking(); 
+            IQueryable<T> query = _dbSet; 
 
             if (includes != null)
             {
@@ -50,6 +48,7 @@ namespace eShop.Core.Services.Implementations
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
         }
+
 
         public IEnumerable<T> GetAll(string[]? includes = null)
         {
@@ -162,7 +161,6 @@ namespace eShop.Core.Services.Implementations
         {
             IQueryable<T> query = _dbSet;
 
-            // Apply includes (eager loading) if provided
             if (includes != null && includes.Length > 0)
             {
                 foreach (var include in includes)
@@ -171,10 +169,8 @@ namespace eShop.Core.Services.Implementations
                 }
             }
 
-            // Apply filter
             query = query.Where(match);
 
-            // Apply pagination
             return query.Skip(skip).Take(take).ToList();
         }
 
@@ -186,7 +182,6 @@ namespace eShop.Core.Services.Implementations
         {
             IQueryable<T> query = _dbSet;
 
-            // Apply includes (eager loading) if provided
             if (includes != null)
             {
                 foreach (var include in includes)
@@ -195,10 +190,8 @@ namespace eShop.Core.Services.Implementations
                 }
             }
 
-            // Apply filter
             query = query.Where(match);
 
-            // Apply pagination
             return await query.Skip(skip).Take(take).ToListAsync();
         }
         public bool Any(Expression<Func<T, bool>> match)

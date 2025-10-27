@@ -113,21 +113,6 @@ namespace eShop.Core.Services.Implementations
             });
         }
 
-        public async Task<IEnumerable<OrderItem>> CreateOrderItemsWithoutTransactionAsync(IEnumerable<CreateOrderItemDto> createOrderItems)
-        {
-            var createdItems = new List<OrderItem>();
-
-            foreach (var createOrderItem in createOrderItems)
-            {
-                var orderItem = _mapper.Map<OrderItem>(createOrderItem);
-                orderItem.TotalPrice = orderItem.Quantity * orderItem.UnitPrice;
-                createdItems.Add(orderItem);
-            }
-
-            await _unitOfWork.OrderItemRepository.AddRangeAsync(createdItems);
-            return createdItems;
-        }
-
         public async Task<OrderItem?> GetOrderItemByIdAsync(int id)
         {
             return await _unitOfWork.OrderItemRepository.GetByIdAsync(id);
@@ -144,13 +129,10 @@ namespace eShop.Core.Services.Implementations
         {
             return await ExecuteInTransactionAsync(async () =>
             {
-                var existingOrderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(updateOrderItem.Id);
-                if (existingOrderItem == null)
-                    throw new NotFoundException($"OrderItem with Id: {updateOrderItem.Id} not found.");
-
+                var existingOrderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(updateOrderItem.Id) ?? throw new NotFoundException($"OrderItem with Id: {updateOrderItem.Id} not found.");
+                
                 var quantityDifference = updateOrderItem.Quantity - existingOrderItem.Quantity;
 
-                // Update stock based on quantity difference
                 if (quantityDifference != 0)
                 {
                     await UpdateStockForQuantityChangeAsync(
@@ -162,7 +144,9 @@ namespace eShop.Core.Services.Implementations
                 existingOrderItem.Quantity = updateOrderItem.Quantity;
                 existingOrderItem.TotalPrice = existingOrderItem.Quantity * existingOrderItem.UnitPrice;
 
+                await _unitOfWork.OrderItemRepository.UpdateAsync(existingOrderItem);
                 await _unitOfWork.SaveChangesAsync();
+
                 await RecalculateOrderTotalsAsync(existingOrderItem.OrderId);
 
                 return existingOrderItem;

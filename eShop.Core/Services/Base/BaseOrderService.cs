@@ -61,10 +61,8 @@ namespace eShop.Core.Services.Base
             }
             else
             {
-                var productDto = await _productService.GetProductByIdAsync(productId);
-                if (productDto == null)
-                    throw new NotFoundException($"Product with ID {productId} not found.");
-
+                var productDto = await _productService.GetProductByIdAsync(productId) ?? throw new NotFoundException($"Product with ID {productId} not found.");
+                
                 int newQuantity = isReduction
                     ? productDto.StockQuantity - quantity
                     : productDto.StockQuantity + quantity;
@@ -79,11 +77,19 @@ namespace eShop.Core.Services.Base
 
         protected async Task RecalculateOrderTotalsAsync(int orderId)
         {
-            var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId, new[] { nameof(Order.OrderItems) });
-            if (order == null)
-                throw new NotFoundException($"Order with ID {orderId} not found.");
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId, new[] { nameof(Order.OrderItems) }) ?? throw new NotFoundException($"Order with ID {orderId} not found.");
 
-            await UpdateOrderTotalsDirectAsync(order);
+            // Calculate SubTotal from OrderItems
+            order.SubTotal = order.OrderItems?.Sum(item => item.TotalPrice) ?? 0;
+
+            // Calculate TotalAmount
+            order.TotalAmount = order.SubTotal + order.TaxAmount + order.ShippingAmount - order.DiscountAmount;
+
+            // Update timestamp
+            order.UpdatedAt = DateTime.UtcNow;
+
+            // Entity is already tracked, just save
+            await _unitOfWork.SaveChangesAsync();
         }
 
         protected async Task UpdateOrderTotalsDirectAsync(Order order)
@@ -183,7 +189,7 @@ namespace eShop.Core.Services.Base
         #region Transaction Helpers
         protected async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> operation)
         {
-            await using var transaction = _unitOfWork.BeginTransaction();
+            await using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var result = await operation();

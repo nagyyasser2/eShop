@@ -1,6 +1,5 @@
-﻿using eShop.Core.DTOs.Category;
-using eShop.Core.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using eShop.Core.DTOs.Category;
 
 namespace eShop.Core.DTOs.Products
 {

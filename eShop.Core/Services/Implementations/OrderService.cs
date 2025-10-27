@@ -126,10 +126,9 @@ namespace eShop.Core.Services.Implementations
         {
             var order = _mapper.Map<Order>(orderDto);
 
-            // Set initial values - totals will be calculated later
             order.OrderNumber = GenerateOrderNumber();
-            order.SubTotal = 0; // Will be calculated after items are added
-            order.TotalAmount = 0; // Will be calculated after items are added
+            order.SubTotal = 0; 
+            order.TotalAmount = 0; 
             order.CreatedAt = DateTime.UtcNow;
             order.UpdatedAt = DateTime.UtcNow;
 
